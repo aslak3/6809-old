@@ -1,4 +1,8 @@
+; this is the bottom of rom
+
 	org $c000
+
+; rom starts with our pretty patterns
 
 lightstart
 	fcb %00000001
@@ -88,21 +92,40 @@ lightstart
 	fcb %00000000
 lightend
 
+; the "address" of the latch (actually the latch is everywhere %10xx)
+
 latch	equ $8000
 
+; jump forward abit - give us some room at the bottom of the patterns
+
 	org $d000
+
+; x is the location of the byte to output, b is how many bytes remain
 
 start	ldx #lightstart
 	ldb #lightend-lightstart
 
+; obtain the byte in a and andvance x, before writing it to the latch
+
 next	lda ,x+
 	sta latch
-	ldy #$2000
+
+; delay loop
+
+	ldy #$4000
 delay	dey
 	bne delay
+
+; go back to the next byte
+
 	decb
 	bne next
+
+; round we go again
+
 	bra start
+
+; setup the reset vector
 
 	org $fffe
 	
