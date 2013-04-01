@@ -1,0 +1,110 @@
+	org $c000
+
+lightstart
+	fcb %00000001
+	fcb %00000010
+	fcb %00000100
+	fcb %00001000
+	fcb %00010000
+	fcb %00100000
+	fcb %01000000
+	fcb %10000000
+	fcb %01000000
+	fcb %00100000
+	fcb %00010000
+	fcb %00001000
+	fcb %00000100
+	fcb %00000010
+	fcb %00000001
+	fcb %00000010
+	fcb %00000100
+	fcb %00001000
+	fcb %00010000
+	fcb %00100000
+	fcb %01000000
+	fcb %10000000
+	fcb %01000000
+	fcb %00100000
+	fcb %00010000
+	fcb %00001000
+	fcb %00000100
+	fcb %00000010
+	fcb %00000001
+	fcb %00000011
+	fcb %00000111
+	fcb %00001111
+	fcb %00011111
+	fcb %00111111
+	fcb %01111111
+	fcb %11111111
+	fcb %11111111
+	fcb %00000000
+	fcb %11111111
+	fcb %00000000
+	fcb %11111111
+	fcb %00000000
+	fcb %11111111
+	fcb %00000000
+	fcb %11111111
+	fcb %00000000
+	fcb %11111111
+	fcb %00000000
+	fcb %11111111
+	fcb %11111110
+	fcb %11111100
+	fcb %11111000
+	fcb %11110000
+	fcb %11100000
+	fcb %11000000
+	fcb %10000000
+	fcb %00000000
+	fcb %10000000
+	fcb %11000000
+	fcb %11100000
+	fcb %11110000
+	fcb %01111000
+	fcb %00111100
+	fcb %00011110
+	fcb %00001111
+	fcb %10000111
+	fcb %11000011
+	fcb %11100001
+	fcb %11110000
+	fcb %01111000
+	fcb %00111100
+	fcb %00011110
+	fcb %00001111
+	fcb %10000111
+	fcb %11000011
+	fcb %11100001
+	fcb %11110000
+	fcb %01111000
+	fcb %00111100
+	fcb %00011110
+	fcb %00001111
+	fcb %00000111
+	fcb %00000011
+	fcb %00000001
+	fcb %00000000
+lightend
+
+latch	equ $8000
+
+	org $d000
+
+start	ldx #lightstart
+	ldb #lightend-lightstart
+
+next	lda ,x+
+	sta latch
+	ldy #$2000
+delay	dey
+	bne delay
+	decb
+	bne next
+	bra start
+
+	org $fffe
+	
+	fdb start
+
