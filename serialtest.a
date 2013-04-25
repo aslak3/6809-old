@@ -1,0 +1,152 @@
+; memory map
+; 0xxx - ram
+; 10xx - io
+; 10xx xxxx xxxx xxxx - serial
+; 11xx - rom
+
+; ascii constants
+
+cr		equ $0d
+lf		equ $0a
+bs		equ $10
+null		equ $00
+
+; serial port addresses - for readability dupe the read/write locations
+
+serialcr	equ $8000
+serialrx	equ $8001
+serialsr	equ $8000
+serialtx	equ $8001
+
+; memory
+
+ramstart	equ $0000
+ramend		equ $7fff
+
+; setup the reset vector, last location in rom
+
+		org $fffe
+	
+		fdb reset
+
+; in ram, add our global variables
+
+		org 0
+
+inputbuffer	rmb 256
+outputbuffer	rmb 256
+
+; this is the start of rom
+
+		org $c000
+
+greetingmsg	fcb cr
+		fcb lf
+		fcc '6809 serial test'
+		fcb cr
+		fcb lf
+		fcb cr
+		fcb lf
+		fcb null
+youtypedmsg	fcc 'You typed: '
+		fcb null
+promptmsg	fcc '> '
+		fcb null
+newlinemsg	fcb cr
+		fcb lf
+		fcb null
+
+; setup stack to the end of ram so it can go grown backwards
+
+reset		lds #ramend+1		; setup hardware stack
+
+		ldx #ramstart		; clear from start of ram
+zeroram		clr ,x+
+		cmpx #ramend+1		; to end
+		bne zeroram
+
+; setup the serial port
+
+		lbsr serialinit		; setup the serial port
+
+		ldx #greetingmsg	; greetings!
+		lbsr serialputstr	; output the greeting
+
+mainloop	ldx #promptmsg		; ">"
+		lbsr serialputstr	; output that
+		
+		ldx #inputbuffer	; now we need some text
+		lbsr serialgetstr	; get the text (waiting as needed)
+
+		ldx #outputbuffer
+
+		ldy #newlinemsg		; tidy up the console with a newline
+		lbsr concatstr		; ...
+		ldy #youtypedmsg	; tell the user ...
+		lbsr concatstr		; ...
+		ldy #inputbuffer	; ...
+		lbsr concatstr		; ...
+		ldy #newlinemsg		; ...
+		lbsr concatstr		; ...
+		clr ,x+			; (add a null)
+
+		ldx #outputbuffer
+		lbsr serialputstr	; ... what they typed
+
+		bra mainloop
+
+;;; SERIAL PORT ;;;
+
+; serial port setup
+
+serialinit	lda #%00000011		; master reset
+		sta serialcr
+		; divider (=16), databits (=8n1), no rts and no interrupts
+		lda #%00010101
+		sta serialcr
+		rts
+
+; put the char in a, returning when its sent
+
+serialputchar	ldb serialsr
+		andb #%00000010		; transmit empty
+		beq serialputchar	; wait for port to be idle
+		sta serialtx		; output the char
+		rts
+
+; puts the null terminated string pointed to by x
+
+serialputstr	lda ,x+			; get the next char
+		beq serialputstrout	; null found, bomb out
+		bsr serialputchar	; output the character
+		bra serialputstr	; more chars
+serialputstrout	rts
+
+; serialgetchar - gets a char, putting it in a
+
+serialgetchar 	lda serialsr		; get status
+		anda #%00000001		; input empty?
+		beq serialgetchar	; go back and look again
+		lda serialrx		; get the char into a
+		bsr serialputchar	; echo it
+		rts
+		
+; serialgetstr - gets a line, upto a cr, filling x as we go
+
+serialgetstr	bsr serialgetchar	; get a char in a
+		cmpa #cr		; cr?
+		beq serialgetstrout	; if it is, then out
+		cmpa #lf		; lf?
+		beq serialgetstrout	; if it is, then out
+		sta ,x+			; add it to string
+		bra serialgetstr	; get more
+serialgetstrout	clr ,x+			; add a null
+		rts
+
+; concatstr - add string y to string x, not copying the null
+
+concatstr	lda ,y+
+		beq concatstrout
+		sta ,x+
+		bra concatstr
+concatstrout	rts
