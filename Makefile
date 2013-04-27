@@ -1,6 +1,6 @@
 UPLOAD = $(HOME)/8bitcomputer/eepromprogrammer/upload/upload
 
-BINS = romonlytest.bin ramtest.bin
+BINS = romonlytest.bin ramtest.bin serialtest.bin monitor.bin
 
 all: $(BINS)
 

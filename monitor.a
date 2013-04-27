@@ -1,0 +1,533 @@
+; memory map
+; 0xxx - ram
+; 10xx - io
+; 10xx xxxx xxxx xxxx - serial
+; 11xx - rom
+
+; ascii constants
+
+CR		equ $0d
+LF		equ $0a
+BS		equ $10
+NULL		equ $00
+
+; serial port addresses - for readability dupe the read/write locations
+
+SERIALCR	equ $8000
+SERIALRX	equ $8001
+SERIALSR	equ $8000
+SERIALTX	equ $8001
+
+; memory
+
+RAMSTART	equ $0000
+RAMEND		equ $7fff
+
+PCOFFSET	equ 10
+
+; software interrupt vector
+
+		org $fffa
+
+		fdb interrupt
+
+; setup the reset vector, last location in rom
+
+		org $fffe
+	
+		fdb reset
+
+; in ram, add our global variables
+
+		org 0
+
+userregs	rmb 11
+inputbuffer	rmb 256
+outputbuffer	rmb 256
+parambuffer	rmb 256
+dumpreadpointer	rmb 2
+dumpreadcounter	rmb 2
+userpointer	rmb 2
+
+; this is the start of rom
+
+		org $c000
+
+greetingmsg	fcb CR
+		fcb LF
+		fcc '6809 Monitor v0.1.'
+		fcb CR
+		fcb LF
+		fcb CR
+		fcb LF
+		fcb NULL
+youtypedmsg	fcc 'You typed: '
+		fcb NULL
+promptmsg	fcc 'Monitor: > '
+		fcb NULL
+nosuchmsg	fcc 'No such command'
+		fcb CR
+		fcb LF
+		fcb NULL
+commfailedmsg	fcc 'Command failed'
+		fcb CR
+		fcb LF
+		fcb NULL
+breakatmsg	fcc '***Break at '
+		fcb NULL
+badexitmsg	fcc 'Internal error; leaving monitor'
+		fcb CR
+		fcb LF
+		fcb NULL
+
+ccmsg		fcc 'CC: '
+		fcb NULL
+amsg		fcc '  A: '
+		fcb NULL
+bmsg		fcc '  B: '
+		fcb NULL
+dpmsg		fcc '  DP: '
+		fcb NULL
+xmsg		fcc '  X: '
+		fcb NULL
+ymsg		fcc '  Y: '
+		fcb NULL
+umsg		fcc '  U: '
+		fcb NULL
+pcmsg		fcc '  PC: '
+		fcb NULL
+
+newlinemsg	fcb CR
+		fcb LF
+		fcb NULL
+
+commandarray	fdb dumpmemory
+		fcc 'd'
+		fdb writememory
+		fcc 'w'
+		fdb exitmonitor
+		fcc 'e'
+		fdb showregisters
+		fcc 'r'
+		fdb $0000
+		fcb NULL
+
+; setup stack to the end of ram so it can go grown backwards
+
+reset		lds #RAMEND+1		; setup hardware stack
+
+		ldx #RAMSTART		; clear from start of ram
+zeroram		clr ,x+
+		cmpx #RAMEND+1		; to end
+		bne zeroram
+
+; setup the serial port
+
+		lbsr serialinit		; setup the serial port
+
+		ldx #greetingmsg	; greetings!
+		lbsr serialputstr	; output the greeting
+
+		swi			; enter the monitor (mainloop)
+
+; we should never get here - it means rti was done without fixing up
+; the return address, print error and loop
+
+		ldx #badexitmsg		; if we get here then setup a msg
+		lbsr serialputstr	; print the message
+badexitloop	bra badexitloop		; loop on the spot
+
+interrupt	ldx #outputbuffer	; setup the "break" message
+		ldy #breakatmsg		; ...
+		lbsr concatstr		; append it
+		leay ,s			; get the new stack pointr
+		ldd 10,y		; the pc is 10 bytes in
+		lbsr wordtoaschex	; convert it to ascii
+		ldy #newlinemsg		; adding a newline
+		lbsr concatstr		; append it
+		clr ,x+			; add a null
+
+		ldx #outputbuffer	; reset the string pointer
+		lbsr serialputstr	; so it can be output
+
+mainloop	ldx #promptmsg		; ">"
+		lbsr serialputstr	; output that
+		
+		ldx #inputbuffer	; now we need a command
+		lbsr serialgetstr	; get the command (waiting as needed)
+
+		ldx #outputbuffer
+
+		ldy #newlinemsg		; tidy up the console with a newline
+		lbsr concatstr		; ...
+		ldy #youtypedmsg	; tell the user ...
+		lbsr concatstr		; ...
+		ldy #inputbuffer	; ...
+		lbsr concatstr		; ...
+		ldy #newlinemsg		; ...
+		lbsr concatstr		; ...
+		clr ,x+			; (add a null)
+
+		ldx #outputbuffer
+		lbsr serialputstr	; ... what they typed
+
+		lda inputbuffer		; get the first char
+		ldx #commandarray	; setup the command pointer
+nextcommand	ldy ,x++		; get the sub address
+		ldb ,x			; get the command letter
+		beq commandarrayend	; end of command list?
+		cmpa ,x+		; compare input letter with array item
+		bne nextcommand		; no match? check next one
+		jsr ,y			; jump to subroutine
+		bne commanderror	; error check for zero
+		bra mainloop		; back to top
+commanderror	ldx #commfailedmsg
+		lbsr serialputstr	; show error
+		bra mainloop
+
+commandarrayend	ldx #nosuchmsg
+		lbsr serialputstr	; show error message
+		bra mainloop
+
+;;; COMMANDS ;;;
+
+; dumpmemory - "d AAAA BBBB" - dumps from AAAA, BBBB bytes
+;
+; C000  48 65 6C 6C 6F 2C 20 74  68 69 73 20 69 73 20 61  [Hello, this is a]
+
+dumpmemory	lbsr parseinput		; parse hexes, filling out inputbuffer
+		lda ,y+			; get the type
+		cmpa #2			; is it a word?
+		lbne dumpmemoryerror	; validation error
+		ldd ,y++		; start address
+		andb #$f0		; round to nearest 16
+		std dumpreadpointer	; store it in the variable
+		lda ,y+			; get the type
+		cmpa #2			; is it a word?
+		bne dumpmemoryerror	; yes, mark it as bad
+		ldd ,y++		; length/count of bytes
+		andb #$f0		; also rounded
+		std dumpreadcounter	; store it in the variable
+
+dumpnextrow	ldx #outputbuffer	; x is persistent across the whole row
+
+		ldd dumpreadpointer	; get address of this row
+		lbsr wordtoaschex	; print the address into the buffer
+		lda #$20		; space
+		sta ,x+			; add a space after the address
+		sta ,x+			; and another
+
+; hex version
+
+		ldy dumpreadpointer	; points at the start of the row
+		ldb #0			; counts across 16 bytes
+
+hexbyteloop	cmpb #$08		; for pretty ness...
+		bne noextraspace	; add a space after 8 bytes
+		lda #$20		; space
+		sta ,x+			; push it in
+noextraspace	lda b,y			; actually read the byte from memory
+		lbsr bytetoaschex	; convert it to ascii
+		lda #$20		; space
+		sta ,x+			; add a space between each byte
+		incb			; incrememnt offset
+		cmpb #$10		; 16 bytes per row
+		bne hexbyteloop		; and do the next byte
+
+		lda #$20		; spaces
+		sta ,x+			; add it in
+		lda #$5b		; opening [
+		sta ,x+			; add it in
+
+; ascii version
+
+		ldy dumpreadpointer	; reset back to the start of the row
+		ldb #0			; counts across 16 bytes
+
+ascbyteloop	lda b,y			; get the byte from memory
+		lbsr printableasc	; nonprintable to a dot
+		sta ,x+			; add it in
+		incb			; increment offset
+		cmpb #$10		; 16 bytes per row
+		bne ascbyteloop		; and do the next byte
+
+		lda #$5d		; closing ]
+		sta ,x+			; add it in
+
+		clra ,x+		; null terminator
+
+		ldx #outputbuffer	; reset back to the start
+		lbsr serialputstr	; so we can finally output it!
+
+		ldx #newlinemsg		; newline
+		lbsr serialputstr	; output it
+
+; move onto the the next row
+
+		ldx dumpreadpointer	; load the pointer back in
+		leax $10,x		; add $10
+		stx dumpreadpointer	; store it back
+		ldx dumpreadcounter	; loead the remaning byte counter
+		leax -$10,x		; subtract $10
+		stx dumpreadcounter	; store it back
+
+		bne dumpnextrow		; more rows?
+		clra			; no error
+		rts
+dumpmemoryerror	lda #1			; mark zero for error
+		rts
+
+writememory	lbsr parseinput		; parse hexes, filling out inputbuffer
+		lda ,y+			; get the type
+		cmpa #2			; is it a word?
+		lbne writememoryerr	; validation error
+		ldx ,y++		; start address
+nextwritebyte	lda ,y+			; get the type
+		beq writememoryout	; that's the end of the byte list
+		cmpa #1			; is it a byte?
+		bne writememoryerr	; not a byte, so error
+		lda ,y+			; get the byte to write
+		sta ,x+			; and load it at memory x
+		bra nextwritebyte	; back for more
+writememoryerr	lda #1			; error condition
+		rts
+writememoryout	clra			; clean exit
+		rts
+
+exitmonitor	lbsr parseinput		; parse hexes, filling out inputbuffer
+		lda ,y+			; get the type
+		cmpa #2			; is it a word?
+		lbne exitmonitorerr	; validation error
+		lds #ramend+1		; move the stack to the top
+		leas -12,s		; then move it back one frame
+		ldx ,y++		; sub address
+		beq cleanexit		; if exit address is 0 dont modify
+		stx 10,s		; before modifiying the pc in stack
+cleanexit	rti			; run the usercode at that address
+exitmonitorerr	lda #1
+		rts	
+
+showregisters	ldx #outputbuffer
+
+		ldy #ccmsg
+		lbsr concatstr
+		lda ramend+1-12
+		lbsr bytetoaschex
+
+		ldy #amsg
+		lbsr concatstr
+		lda ramend+1-11
+		lbsr bytetoaschex
+
+		ldy #bmsg
+		lbsr concatstr
+		lda ramend+1-10
+		lbsr bytetoaschex
+
+		ldy #dpmsg
+		lbsr concatstr
+		lda ramend+1-9
+		lbsr bytetoaschex
+
+		ldy #xmsg
+		lbsr concatstr
+		ldd ramend+1-8
+		lbsr wordtoaschex
+
+		ldy #ymsg
+		lbsr concatstr
+		ldd ramend+1-6
+		lbsr wordtoaschex
+
+		ldy #umsg
+		lbsr concatstr
+		ldd ramend+1-4
+		lbsr wordtoaschex
+
+		ldy #pcmsg
+		lbsr concatstr
+		ldd ramend+1-2
+		lbsr wordtoaschex
+
+		ldy #newlinemsg
+		lbsr concatstr
+		clr ,x+
+
+		ldx #outputbuffer
+		lbsr serialputstr
+		clra
+		rts
+
+;;; SERIAL PORT ;;;
+
+; serial port setup
+
+serialinit	lda #%00000011		; master reset
+		sta SERIALCR
+		; divider (=16), databits (=8n1), no rts and no interrupts
+		lda #%00010101
+		sta SERIALCR
+		rts
+
+; put the char in a, returning when its sent
+
+serialputchar	ldb SERIALSR
+		andb #%00000010		; transmit empty
+		beq serialputchar	; wait for port to be idle
+		sta SERIALTX		; output the char
+		rts
+
+; puts the null terminated string pointed to by x
+
+serialputstr	lda ,x+			; get the next char
+		beq serialputstrout	; null found, bomb out
+		bsr serialputchar	; output the character
+		bra serialputstr	; more chars
+serialputstrout	rts
+
+; serialgetchar - gets a char, putting it in a
+
+serialgetchar 	lda SERIALSR		; get status
+		anda #%00000001		; input empty?
+		beq serialgetchar	; go back and look again
+		lda SERIALRX		; get the char into a
+		bsr serialputchar	; echo it
+		rts
+		
+; serialgetstr - gets a line, upto a cr, filling x as we go
+
+serialgetstr	bsr serialgetchar	; get a char in a
+		cmpa #CR		; cr?
+		beq serialgetstrout	; if it is, then out
+		cmpa #LF		; lf?
+		beq serialgetstrout	; if it is, then out
+		sta ,x+			; add it to string
+		bra serialgetstr	; get more
+serialgetstrout	clr ,x+			; add a null
+		rts
+
+;;; STRINGS ;;;
+
+; aschextonib - convert a char on x to a low nibble in a
+
+aschextonib	lda ,x+			; get the charater
+		suba #$30		; subtract '0'
+		cmpa #$10		; less then 9?
+		blo aschextonibout	; yes? we are done
+		suba #$07		; no? subtract 'A'-'9'
+		cmpa #$10		; less then 16?
+		blo aschextonibout	; was uppercase
+		suba #$20
+aschextonibout	rts
+
+; aschextobyte - convert two characters on x to a byte in a
+
+aschextobyte	leas -1,s		; make room on stack for 1 temp byte
+		bsr aschextonib		; convert the low nibble
+		lsla			; make it the high nibble
+		lsla			; ..
+		lsla			; ..
+		lsla			; ..
+		sta ,s			; save it on the stack
+		bsr aschextonib		; convert the real low nibble
+		ora ,s			; combine it with the high nibble
+		leas 1,s		; shrink the stack again
+		rts
+
+; aschextowrd - convert four characters on x to a word in d
+
+aschextoword	bsr aschextobyte	; convert the first byte in the string
+		tfr a,b			; move it asside
+		bsr aschextobyte	; convert the second byte
+		exg a,b			; swap the bytes
+		rts			; d is now the word
+
+; parse a stream of ascii hex into the u stack
+
+parseinput	ldx #inputbuffer+1	; point at the inputbuffer
+		ldy #parambuffer	; setup parser location
+nextparseinput	lda ,x			; check for an initiial null
+		beq parseinputout	; null? out we go
+		bsr skipspaces		; skip spaces
+		lda 2,x			; get the next but one char
+		beq parsebyte		; null? it's a byte
+		cmpa #$20		; space
+		beq parsebyte		; yes? it's a byte
+		bra parseword		; must be a word
+parsebyte	lda #1			; code 1 for bytes
+		sta ,y+			; add it into the stream
+		bsr aschextobyte	; yes? this pair must be a byte
+		sta ,y+			; save it in u
+		bra nextparseinput		; look for more
+parseword	lda #2			; code 2 for words
+		sta ,y+			; add it in to the stream
+		bsr aschextoword	; if we get here it must be a word
+		std ,y++		; save the word in u
+		bra nextparseinput
+parseinputout	clr ,y+			; null ender
+		ldy #parambuffer	; reset back for the caller
+		rts
+
+; nibtoaschex - convert a low nibble in a to a character in x, advancing it
+
+nibtoaschex	anda #$0f		; mask out the high nibble
+		adda #$30		; add '0'
+		cmpa #$39		; see if we are past '9'
+		ble nibtoaschexout	; no? number then, so we're done
+		adda #$07		; yes? letter then, add 'A'-'9'
+nibtoaschexout	sta ,x+			; add it to the string
+		rts		
+
+; bytetoaschex - convert a byte in a to two characters in x, advancing it
+		
+bytetoaschex	pshs a			; save original input byte
+		lsra			; move high nibble into low nibble
+		lsra			; ..
+		lsra			; ..
+		lsra			; ..
+		bsr nibtoaschex		; convert the low nibble
+		puls a			; get the original input back
+		bsr nibtoaschex		; convert the high nibble
+		rts
+
+; wordtoaschex - convert a word in d to four characters in x, advancing it
+
+wordtoaschex	pshs b			; save low byte
+		bsr bytetoaschex	; output high byte
+		puls a			; restore low byte
+		bsr bytetoaschex	; and output low byte
+		rts
+
+; jump x across spaces
+
+skipspaces	lda ,x+			; skip a space
+		cmpa #$20		; is it a space?
+		beq skipspaces		; yes? then go back and look for more
+		leax -1,x		; back 1
+		rts
+
+; printableasc - converts non printables to . in a
+
+printableasc	cmpa #$20
+		blo printabletodot
+		cmpa #$7e
+		bhi printabletodot
+		rts
+printabletodot	lda #$2e
+		rts
+
+; concatstr - add string y to string x, not copying the null
+
+concatstr	lda ,y+
+		beq concatstrout
+		sta ,x+
+		bra concatstr
+concatstrout	rts
+
+;;; MISC ;;;
+
+; delay by y - subroutine
+
+delay		leay -1,y
+		bne delay
+		rts
