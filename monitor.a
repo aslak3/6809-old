@@ -1,8 +1,14 @@
-; memory map
+; hardware memory map
 ; 0xxx - ram
 ; 10xx - io
 ; 10xx xxxx xxxx xxxx - serial
 ; 11xx - rom
+
+; ram map
+; 0000 -> 0fff - temp storage (stack at 0fff)
+; 4000 -> 7fff - 16kb for rom when uploading
+; rom map
+; c000 -> ffff - program
 
 ; ascii constants
 
@@ -20,8 +26,14 @@ SERIALTX	equ $8001
 
 ; memory
 
-RAMSTART	equ $0000
-RAMEND		equ $7fff
+RAMSTART        equ $0000
+RAMEND          equ $7fff
+ROMSTART        equ $c000
+ROMEND          equ $ffff
+ROMCOPYSTART    equ $4000
+ROMCOPYEND      equ $7fff
+
+STACKEND	equ $0fff
 
 PCOFFSET	equ 10
 
@@ -47,7 +59,7 @@ outputbuffer	rmb 256
 parambuffer	rmb 256
 dumpreadpointer	rmb 2
 dumpreadcounter	rmb 2
-userpointer	rmb 2
+flashblock	rmb 64
 
 ; this is the start of rom
 
@@ -55,7 +67,7 @@ userpointer	rmb 2
 
 greetingmsg	fcb CR
 		fcb LF
-		fcc '6809 Monitor v0.1.'
+		fcc '6809 Monitor v0.0.3.'
 		fcb CR
 		fcb LF
 		fcb CR
@@ -76,6 +88,38 @@ commfailedmsg	fcc 'Command failed'
 breakatmsg	fcc '***Break at '
 		fcb NULL
 badexitmsg	fcc 'Internal error; leaving monitor'
+		fcb CR
+		fcb LF
+		fcb NULL
+flashreadymsg	fcc '+++'
+		fcb NULL
+resetmsg	fcb CR
+		fcb LF
+		fcc '***flash with f or any other key to start'
+		fcb CR
+		fcb LF
+		fcb NULL
+helpmsg		fcc 'Commands:'
+		fcb CR
+		fcb LF
+		fcc '  r : show registers'
+		fcb CR
+		fcb LF
+		fcc '  w SSSS B1 B2 B3 ... : write to SSSS bytes B1 B2 B3 ...'
+		fcb CR
+		fcb LF
+		fcc '  d SSSS LLLL : dump from SSSS count LLLL bytes in hex'
+		fcb CR
+		fcb LF
+		fcc '  e EEEE : exit to user code at EEEE'
+		fcb CR
+		fcb LF
+		fcc '  x : reset the monitor'
+		fcb CR
+		fcb LF
+		fcc '  h or ? : this help'
+		fcb CR
+		fcb LF
 		fcb CR
 		fcb LF
 		fcb NULL
@@ -109,12 +153,18 @@ commandarray	fdb dumpmemory
 		fcc 'e'
 		fdb showregisters
 		fcc 'r'
+		fdb showhelp
+		fcc 'h'
+		fdb showhelp
+		fcc '?'			; same command different letter
+		fdb resetmonitor
+		fcc 'x'
 		fdb $0000
 		fcb NULL
 
 ; setup stack to the end of ram so it can go grown backwards
 
-reset		lds #RAMEND+1		; setup hardware stack
+reset		lds #STACKEND+1		; setup hardware stack
 
 		ldx #RAMSTART		; clear from start of ram
 zeroram		clr ,x+
@@ -125,7 +175,28 @@ zeroram		clr ,x+
 
 		lbsr serialinit		; setup the serial port
 
-		ldx #greetingmsg	; greetings!
+		ldx #resetmsg		; show prompt for flash
+		lbsr serialputstr
+
+		lbsr serialgetchar	; wait for a key, getting the command
+
+		cmpa #$66		; 'f'
+		bne normalstart		; not one? then normal startup
+
+		ldx #ROMSTART		; setup the rom copy to ram
+		ldy #ROMCOPYSTART	; this is the second half of ram
+romcopy		lda ,x+			; read in
+		sta ,y+			; and read out
+		cmpx #ROMEND+1		; check to see if we are at the end
+		bne romcopy		; copy more
+
+
+		ldx #flasher		; get the location of the flasher code
+		leax -ROMSTART,x	; offset it from the start of rom
+		leax ROMCOPYSTART,x	; offset it forward where it now is 
+		jmp ,x			; jump to the new location of flasher
+
+normalstart	ldx #greetingmsg	; greetings!
 		lbsr serialputstr	; output the greeting
 
 		swi			; enter the monitor (mainloop)
@@ -150,7 +221,7 @@ interrupt	ldx #outputbuffer	; setup the "break" message
 		ldx #outputbuffer	; reset the string pointer
 		lbsr serialputstr	; so it can be output
 
-mainloop	ldx #promptmsg		; ">"
+mainloop	ldx #promptmsg		; ">" etc
 		lbsr serialputstr	; output that
 		
 		ldx #inputbuffer	; now we need a command
@@ -286,19 +357,21 @@ nextwritebyte	lda ,y+			; get the type
 		beq writememoryout	; that's the end of the byte list
 		cmpa #1			; is it a byte?
 		bne writememoryerr	; not a byte, so error
-		lda ,y+			; get the byte to write
-		sta ,x+			; and load it at memory x
+		ldb ,y+			; get the byte to write
+		stb ,x+			; and load it at memory x
 		bra nextwritebyte	; back for more
 writememoryerr	lda #1			; error condition
 		rts
-writememoryout	clra			; clean exit
+writememoryout	;cmpb -1,x		; loop until the last value written
+		;bne writememoryout	; is stored (for eeprom writes)
+		clra			; clean exit
 		rts
 
 exitmonitor	lbsr parseinput		; parse hexes, filling out inputbuffer
 		lda ,y+			; get the type
 		cmpa #2			; is it a word?
 		lbne exitmonitorerr	; validation error
-		lds #ramend+1		; move the stack to the top
+		lds #STACKEND+1		; move the stack to the top
 		leas -12,s		; then move it back one frame
 		ldx ,y++		; sub address
 		beq cleanexit		; if exit address is 0 dont modify
@@ -307,56 +380,72 @@ cleanexit	rti			; run the usercode at that address
 exitmonitorerr	lda #1
 		rts	
 
-showregisters	ldx #outputbuffer
+; shows the registers as they were when the monitor was entered
 
-		ldy #ccmsg
-		lbsr concatstr
-		lda ramend+1-12
-		lbsr bytetoaschex
+showregisters	ldx #outputbuffer	; set output buffer
 
-		ldy #amsg
-		lbsr concatstr
-		lda ramend+1-11
-		lbsr bytetoaschex
+		ldy #ccmsg		; get the 'C: '
+		lbsr concatstr		; concat it onto outputbuffer
+		lda STACKEND+1-12	; get the register value
+		lbsr bytetoaschex	; convert and concat it
+
+		ldy #amsg		; same again
+		lbsr concatstr		; ...
+		lda STACKEND+1-11	; ...
+		lbsr bytetoaschex	; ...
 
 		ldy #bmsg
 		lbsr concatstr
-		lda ramend+1-10
+		lda STACKEND+1-10
 		lbsr bytetoaschex
 
 		ldy #dpmsg
 		lbsr concatstr
-		lda ramend+1-9
+		lda STACKEND+1-9
 		lbsr bytetoaschex
 
 		ldy #xmsg
 		lbsr concatstr
-		ldd ramend+1-8
+		ldd STACKEND+1-8
 		lbsr wordtoaschex
 
 		ldy #ymsg
 		lbsr concatstr
-		ldd ramend+1-6
+		ldd STACKEND+1-6
 		lbsr wordtoaschex
 
 		ldy #umsg
 		lbsr concatstr
-		ldd ramend+1-4
+		ldd STACKEND+1-4
 		lbsr wordtoaschex
 
 		ldy #pcmsg
 		lbsr concatstr
-		ldd ramend+1-2
+		ldd STACKEND+1-2
 		lbsr wordtoaschex
 
 		ldy #newlinemsg
 		lbsr concatstr
 		clr ,x+
 
-		ldx #outputbuffer
+		ldx #outputbuffer	; and output it
 		lbsr serialputstr
-		clra
+		clra			; we always succeed
 		rts
+
+; shows some help text
+
+showhelp	ldx #greetingmsg	; show the greeting
+		lbsr serialputstr	; for the version number
+		ldx #helpmsg		; and the help text
+		lbsr serialputstr
+		clra			; we always suceed
+		rts
+
+; restart the monitor (so we can flash it with 'f', most likely)
+
+resetmonitor	ldx $fffe		; get the reset vector
+		jmp ,x			; jump to it
 
 ;;; SERIAL PORT ;;;
 
@@ -391,8 +480,7 @@ serialgetchar 	lda SERIALSR		; get status
 		anda #%00000001		; input empty?
 		beq serialgetchar	; go back and look again
 		lda SERIALRX		; get the char into a
-		bsr serialputchar	; echo it
-		rts
+serialgetcharo	rts
 		
 ; serialgetstr - gets a line, upto a cr, filling x as we go
 
@@ -401,6 +489,7 @@ serialgetstr	bsr serialgetchar	; get a char in a
 		beq serialgetstrout	; if it is, then out
 		cmpa #LF		; lf?
 		beq serialgetstrout	; if it is, then out
+		bsr serialputchar	; echo it
 		sta ,x+			; add it to string
 		bra serialgetstr	; get more
 serialgetstrout	clr ,x+			; add a null
@@ -508,26 +597,78 @@ skipspaces	lda ,x+			; skip a space
 
 ; printableasc - converts non printables to . in a
 
-printableasc	cmpa #$20
-		blo printabletodot
-		cmpa #$7e
-		bhi printabletodot
-		rts
-printabletodot	lda #$2e
+printableasc	cmpa #$20		; compare with space
+		blo printabletodot	; lower? it must be a unprintable
+		cmpa #$7e		; compare with the end char
+		bhi printabletodot	; higher? it must be unprintable
+		rts			; if not, leave it alone
+printabletodot	lda #$2e		; otherwise flatten it to a dot
 		rts
 
 ; concatstr - add string y to string x, not copying the null
 
-concatstr	lda ,y+
-		beq concatstrout
-		sta ,x+
-		bra concatstr
+concatstr	lda ,y+			; get the char in y
+		beq concatstrout	; if its a null then finish
+		sta ,x+			; otherwise add it to x
+		bra concatstr		; go back for more
 concatstrout	rts
 
 ;;; MISC ;;;
 
 ; delay by y - subroutine
 
-delay		leay -1,y
-		bne delay
+delay		leay -1,y		; decrement y
+		bne delay		; not zero? do it again
 		rts
+; flasher
+
+flasher		ldx #flashreadymsg	; tell other end it can send now
+		lbsr serialputstr
+
+; read 64bytes from the serial port into ram
+
+		ldy #ROMSTART		; setup the counter into rom
+inflashblk	ldx #flashblock		; this is the block in ram we...
+		ldb #64			; are copying into
+inflash		lbsr serialgetchar	; get the byte from the port
+		sta ,x+			; store it
+		decb			; we store 64bytes
+		bne inflash		; back to the next byte
+
+; then write them into rom
+
+		ldx #flashblock		; after we have a block
+		ldb #64			; of 64 bytes
+outflash	lda ,x+			; get the byte from ram
+		sta ,y+			; and write it into the rom
+		decb			; reduce byte counter
+		bne outflash		; back for more if non zero
+
+; circa 10ms delay between blocks
+
+		ldx #12000		; setup delay counter
+flashdelayloop	leax -1,x		; dey
+		bne flashdelayloop
+
+; tell the uploader that we have written the block, and it can send the
+; next one
+
+		lda #$23		; '#'
+		lbsr serialputchar	; send the char
+		cmpy #ROMEND+1		; see if we are the end of rom
+		bne inflashblk		; back to the next block
+
+; send the content of the rom back, so the sender knows what was written -
+; we can't do anything if it didn't write, but at least we know
+
+		ldy #ROMSTART		; back to the start
+verflash	lda ,y+			; get the byte
+		lbsr serialputchar	; output it
+		cmpy #ROMEND+1
+		bne verflash
+
+; we could in theory try again but good or bad, do a reset on the new
+; reset vector
+		
+		ldx $fffe		; load the new reset vector
+		jmp ,x			; jump to it

@@ -1,4 +1,8 @@
 UPLOAD = $(HOME)/8bitcomputer/eepromprogrammer/upload/upload
+FLASHER = ./flasher/flasher
+
+PROG_SERIAL = /dev/ttyUSB0
+6809_SERIAL = /dev/ttyUSB0
 
 BINS = romonlytest.bin ramtest.bin serialtest.bin monitor.bin
 
@@ -13,6 +17,9 @@ all: $(BINS)
 clean:
 	rm -f $(BINS) *.hex *.bin
 
-upload:
-	$(UPLOAD) -f $(BIN) -s /dev/ttyUSB0
-		
+doupload:
+	$(UPLOAD) -f $(BIN) -s $(PROG_SERIAL)
+
+doflasher:
+	$(FLASHER) -f $(BIN) -s $(6809_SERIAL)
+	
