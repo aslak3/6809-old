@@ -77,6 +77,8 @@ flashblock	rmb 64
 timeoutput	rmb 8
 uptimeh		rmb 2
 uptimel		rmb 2
+i2coutbuffer	rmb 32
+
 ; this is the start of rom
 
 		org $c000
@@ -85,7 +87,7 @@ uptimel		rmb 2
 
 greetingmsg	fcb CR
 		fcb LF
-		fcc '6809 Monitor v0.0.3.'
+		fcc '6809 Monitor v0.0.4.'
 		fcb CR
 		fcb LF
 		fcb CR
@@ -161,6 +163,9 @@ helpmsg		fcc 'Commands:'
 		fcc '  u : show uptime'
 		fcb CR
 		fcb LF
+		fcc '  o OO : output OO on I2C I/O expander port A'
+		fcb CR
+		fcb LF
 		fcc '  h or ? : this help'
 		fcb CR
 		fcb LF
@@ -213,6 +218,8 @@ commandarray	fdb dumpmemory
 		fcc 't'
 		fdb showuptime
 		fcc 'u'
+		fdb i2cout
+		fcc 'o'
 		fdb $0000
 		fcb NULL
 
@@ -226,6 +233,16 @@ showtimeparams	fcb 1
 		fdb timeoutput
 		fcb 2
 		fdb $0008
+		fcb 0
+
+i2coutparams	fcb 1
+		fcb $40
+		fcb 1
+		fcb $00
+		fcb 2
+		fdb i2coutbuffer
+		fcb 2
+		fdb $0014
 		fcb 0
 
 ; days array - each day is 4 bytes long
@@ -430,7 +447,7 @@ ascbyteloop	lda b,y			; get the byte from memory
 		lda #$5d		; closing ]
 		sta ,x+			; add it in
 
-		clra ,x+		; null terminator
+		clr ,x+			; null terminator
 
 		ldx #outputbuffer	; reset back to the start
 		lbsr serialputstr	; so we can finally output it!
@@ -752,6 +769,24 @@ showuptime	ldx #outputbuffer
 		clr ,x+
 		ldx #outputbuffer
 		lbsr serialputstr
+		rts
+
+; i2cout - outputs a byte on port a of the i2c io expander at slave $40
+
+i2cout		lbsr parseinput		; parse hexes, filling out inputbuffer
+		lda ,y+			; get the argument
+		cmpa #1			; byte?
+		bne i2couterr		; if not then error
+
+		lda ,y+			; get the byte to output
+		ldx #i2coutbuffer	; setup param block for i2c to rtc
+		sta $12,x		; stick it in the i2c buffer
+
+		ldy #i2coutparams	; get the i2c paramters
+		lbsr i2cstoredirect	; do the i2c operation
+		rts			; propogate error state
+
+i2couterr	lda #1
 		rts
 
 ;;; SERIAL PORT ;;;
