@@ -4,8 +4,11 @@
 ; 11xx - rom
 
 ; io map
-; 10xx xx00 xxxx xxxX - serial
-; 10xx xx01 xxxx xxxX - i2c interface
+; 10xx x000 xxxx xxxX - serial
+; 10xx x001 xxxx xxxX - unused
+; 10xx x010 xxxx xxxx - simple diagnostic latch
+; 10xx x011 xxxx XXXX - 6522
+; 10xx x100 xxxx xXXX - ide port
 
 ; ram map
 ; 0000 -> 0fff - temp storage (stack at 0fff)
@@ -27,10 +30,43 @@ SERIALRX	equ $8001
 SERIALSR	equ $8000
 SERIALTX	equ $8001
 
-; i2c
+; latch
 
-I2CLOW		equ $8100
-I2CHIGH		equ $8101
+LATCH		equ $8200
+
+; 6522
+
+PORTB6522	equ $8300
+PORTA6522	equ $8301
+DDRB6522	equ $8302
+DDRA6522	equ $8303
+T1CL6522	equ $8304
+T1CH6522	equ $8305
+T1LL6522	equ $8306
+T1LH6522	equ $8307
+T2LL6522	equ $8308
+T2CL6522	equ $8308
+T2CH6522	equ $8309
+SR6522		equ $830a
+ACR6522		equ $830b
+PCR6522		equ $830c
+IFR6522		equ $830d
+IER6522		equ $830e
+ORAX6522	equ $830f
+
+; IDE
+
+IDEDATA		equ $8400
+IDEERR		equ $8401
+IDEFEATURES	equ $8401
+IDECOUNT	equ $8402
+IDELBA0		equ $8403
+IDELBA1		equ $8404
+IDELBA2		equ $8405
+IDELBA3		equ $8406
+IDEHEADS	equ $8406
+IDESTATUS	equ $8407
+IDECOMMAND	equ $8407
 
 ; memory
 
@@ -44,6 +80,13 @@ ROMCOPYEND      equ $7fff
 STACKEND	equ $0fff
 
 PCOFFSET	equ 10
+
+; SPI bits
+
+MOSI		equ $01
+SCLK 		equ $02
+SS		equ $04
+MISO		equ $80
 
 ; software interrupt vector
 
@@ -77,17 +120,19 @@ flashblock	rmb 64
 timeoutput	rmb 8
 uptimeh		rmb 2
 uptimel		rmb 2
-i2coutbuffer	rmb 32
+ideidentifyblk	rmb 512
+idembrblk	rmb 512
+firstpartsects	rmb 2
 
 ; this is the start of rom
 
 		org $c000
 
-; START OF DATA
+; START OF GLOBAL READ-ONLY DATA
 
 greetingmsg	fcb CR
 		fcb LF
-		fcc '6809 Monitor v0.0.4.'
+		fcc '6809 Monitor v0.0.5.'
 		fcb CR
 		fcb LF
 		fcb CR
@@ -119,76 +164,6 @@ resetmsg	fcb CR
 		fcb CR
 		fcb LF
 		fcb NULL
-i2cbuserrormsg	fcc 'I2C bus error'
-		fcb CR
-		fcb LF
-		fcb NULL
-i2ctimeoutmsg	fcc 'I2C timeout'
-		fcb CR
-		fcb LF
-		fcb NULL
-helpmsg		fcc 'Commands:'
-		fcb CR
-		fcb LF
-		fcc '  r : show registers'
-		fcb CR
-		fcb LF
-		fcc '  w AAAA B1 B2 B3 ... : write to AAAA bytes B1 B2 B3 ...'
-		fcb CR
-		fcb LF
-		fcc '  d AAAA LLLL : dump from AAAA count LLLL bytes in hex'
-		fcb CR
-		fcb LF
-		fcc '  e EEEE : exit to user code at EEEE'
-		fcb CR
-		fcb LF
-		fcc '  x : reset the monitor'
-		fcb CR
-		fcb LF
-		fcc '  s SS [AA]AA FFFF LLLL: store to I2C slave SS at [AA]AA count LLL bytes'
-		fcb CR
-		fcb LF
-		fcc '      reading from memory starting from FFFF'
-		fcb CR
-		fcb LF
-		fcc '  l SS [AA]AA DDDD LLLL : load from I2C slave SS at [AA]AA count LLLL bytes'
-		fcb CR
-		fcb LF
-		fcc '      and copy into memory starting from DDDD'
-		fcb CR
-		fcb LF
-		fcc '  t : show time'
-		fcb CR
-		fcb LF
-		fcc '  u : show uptime'
-		fcb CR
-		fcb LF
-		fcc '  o OO : output OO on I2C I/O expander port A'
-		fcb CR
-		fcb LF
-		fcc '  h or ? : this help'
-		fcb CR
-		fcb LF
-		fcb CR
-		fcb LF
-		fcb NULL
-
-ccmsg		fcc 'CC: '
-		fcb NULL
-amsg		fcc '  A: '
-		fcb NULL
-bmsg		fcc '  B: '
-		fcb NULL
-dpmsg		fcc '  DP: '
-		fcb NULL
-xmsg		fcc '  X: '
-		fcb NULL
-ymsg		fcc '  Y: '
-		fcb NULL
-umsg		fcc '  U: '
-		fcb NULL
-pcmsg		fcc '  PC: '
-		fcb NULL
 
 newlinemsg	fcb CR
 		fcb LF
@@ -210,57 +185,25 @@ commandarray	fdb dumpmemory
 		fcc '?'			; same command different letter
 		fdb resetmonitor
 		fcc 'x'
-		fdb i2cstore
-		fcc 's'
-		fdb i2cload
-		fcc 'l'
 		fdb showtime
 		fcc 't'
 		fdb showuptime
 		fcc 'u'
-		fdb i2cout
-		fcc 'o'
+		fdb latchout
+		fcc 'c'
+		fdb spistore
+		fcc '+'
+		fdb ideidentify
+		fcc 'i'
+		fdb idereadsector
+		fcc '<'
+		fdb readblock
+		fcc 'b'
+		fdb idemount
+		fcc 'm'
 		fdb $0000
 		fcb NULL
 
-; showtimeparams - params for i2cload for reading the time into timeoutput buffer
-
-showtimeparams	fcb 1
-		fcb $d0
-		fcb 1
-		fcb $00
-		fcb 2
-		fdb timeoutput
-		fcb 2
-		fdb $0008
-		fcb 0
-
-i2coutparams	fcb 1
-		fcb $40
-		fcb 1
-		fcb $00
-		fcb 2
-		fdb i2coutbuffer
-		fcb 2
-		fdb $0014
-		fcb 0
-
-; days array - each day is 4 bytes long
-
-days		fcc 'Sun'
-		fcb NULL
-		fcc 'Mon'
-		fcb NULL
-		fcc 'Tue'
-		fcb NULL
-		fcc 'Wed'
-		fcb NULL
-		fcc 'Thu'
-		fcb NULL
-		fcc 'Fri'
-		fcb NULL
-		fcc 'Sat'
-		fcb NULL
 
 ; END OF DATA
 
@@ -276,6 +219,7 @@ zeroram		clr ,x+
 ; setup the serial port
 
 		lbsr serialinit		; setup the serial port
+		lbsr viainit
 
 		ldx #resetmsg		; show prompt for flash
 		lbsr serialputstr
@@ -305,8 +249,6 @@ normalstart	ldx #greetingmsg	; greetings!
 		std uptimeh		; and store high word
 		std uptimel		; and low word
 
-		lbsr i2cinit		; setup i2c
-
 		swi			; enter the monitor (mainloop)
 
 ; we should never get here - it means rti was done without fixing up
@@ -316,15 +258,15 @@ normalstart	ldx #greetingmsg	; greetings!
 		lbsr serialputstr	; print the message
 badexitloop	bra badexitloop		; loop on the spot
 
-; nmi uptime counter
+; nmi uptime counter - increment 32 bit counter
 
-nmiinterrupt	ldx uptimel
-		leax 1,x
-		stx uptimel
-		bne nmiinterruptout
-		ldx uptimeh
-		leax 1,x
-		stx uptimeh
+nmiinterrupt	ldx uptimel		; get current lowword uptime
+		leax 1,x		; add 1
+		stx uptimel		; store it back
+		bne nmiinterruptout	; if not 0 then done
+		ldx uptimeh		; otherwise low current highword
+		leax 1,x		; add 1
+		stx uptimeh		; store it back
 nmiinterruptout	rti
 
 ; monitor entry point
@@ -382,6 +324,11 @@ commandarrayend	ldx #nosuchmsg
 		lbsr serialputstr	; show error message
 		bra mainloop
 
+; general error handler branch for commands that fail
+
+generalerror	lda #1
+		rts
+
 ;;; COMMANDS ;;;
 
 ; dumpmemory - "d AAAA BBBB" - dumps from AAAA, BBBB bytes
@@ -391,13 +338,13 @@ commandarrayend	ldx #nosuchmsg
 dumpmemory	lbsr parseinput		; parse hexes, filling out inputbuffer
 		lda ,y+			; get the type
 		cmpa #2			; is it a word?
-		lbne dumpmemoryerror	; validation error
+		lbne generalerror	; validation error
 		ldd ,y++		; start address
 		andb #$f0		; round to nearest 16
 		std dumpreadpointer	; store it in the variable
 		lda ,y+			; get the type
 		cmpa #2			; is it a word?
-		bne dumpmemoryerror	; yes, mark it as bad
+		bne generalerror	; yes, mark it as bad
 		ldd ,y++		; length/count of bytes
 		andb #$f0		; also rounded
 		std dumpreadcounter	; store it in the variable
@@ -467,23 +414,19 @@ ascbyteloop	lda b,y			; get the byte from memory
 		bne dumpnextrow		; more rows?
 		clra			; no error
 		rts
-dumpmemoryerror	lda #1			; mark zero for error
-		rts
 
 writememory	lbsr parseinput		; parse hexes, filling out inputbuffer
 		lda ,y+			; get the type
 		cmpa #2			; is it a word?
-		lbne writememoryerr	; validation error
+		lbne generalerror	; validation error
 		ldx ,y++		; start address
 nextwritebyte	lda ,y+			; get the type
 		beq writememoryout	; that's the end of the byte list
 		cmpa #1			; is it a byte?
-		bne writememoryerr	; not a byte, so error
+		lbne generalerror	; not a byte, so error
 		ldb ,y+			; get the byte to write
 		stb ,x+			; and load it at memory x
 		bra nextwritebyte	; back for more
-writememoryerr	lda #1			; error condition
-		rts
 writememoryout	clra			; clean exit
 		rts
 
@@ -492,17 +435,32 @@ writememoryout	clra			; clean exit
 exitmonitor	lbsr parseinput		; parse hexes, filling out inputbuffer
 		lda ,y+			; get the type
 		cmpa #2			; is it a word?
-		lbne exitmonitorerr	; validation error
+		lbne generalerror	; validation error
 		lds #STACKEND+1		; move the stack to the top
 		leas -12,s		; then move it back one frame
 		ldx ,y++		; sub address
 		beq cleanexit		; if exit address is 0 dont modify
 		stx 10,s		; before modifiying the pc in stack
 cleanexit	rti			; run the usercode at that address
-exitmonitorerr	lda #1
-		rts	
 
 ; shows the registers as they were when the monitor was entered
+
+ccmsg		fcc 'CC: '
+		fcb NULL
+amsg		fcc '  A: '
+		fcb NULL
+bmsg		fcc '  B: '
+		fcb NULL
+dpmsg		fcc '  DP: '
+		fcb NULL
+xmsg		fcc '  X: '
+		fcb NULL
+ymsg		fcc '  Y: '
+		fcb NULL
+umsg		fcc '  U: '
+		fcb NULL
+pcmsg		fcc '  PC: '
+		fcb NULL
 
 showregisters	ldx #outputbuffer	; set output buffer
 
@@ -555,137 +513,53 @@ showregisters	ldx #outputbuffer	; set output buffer
 		clra			; we always succeed
 		rts
 
-; i2c store - "s SS [AA]AA FFFF LLLL..." - writes to the i2c bus
-
-i2cstore	lbsr parseinput		; parse hexes, filling out inputbuffer
-
-i2cstoredirect	lbsr i2caddr		; send the i2c and memory addresses
-		bne i2cstoreerr		; validation error from the above
-
-		lda ,y+			; get the type
-		cmpa #2			; word?
-		bne i2cstoreerr		; validation error
-		ldx ,y++		; get the start of mpu memory
-
-		lda, y+			; get the type
-		cmpa #2			; word?
-		bne i2cstoreerr		; validation error
-		ldy ,y			; get the count of bytes to read
-
-i2cstorenext	lbsr i2csenddone	; wait for last byte
-		bne i2cstorebuserr	; i2c bus error
-		lda ,x+			; get data to write
-		lbsr i2cwrite		; write it
-
-		leay -1,y
-		bne i2cstorenext	; look for more
-
-		lbsr i2csenddone	; wait for last write to finish
-		bne i2cstorebuserr	; i2c bus error
-		lbsr i2cstop		; mark with stop code
-		clra
-		rts
-
-i2cstorebuserr	ldx #i2cbuserrormsg
-		lbsr serialputstr	; tell the user about the bus error
-		lbsr i2cstop
-		lda #1			; this is not a validation error
-		rts
-
-i2cstoreerr	lbsr i2cstop		; tidy up with a stop
-		lda #1			; bad exit
-		rts
-
-; i2cload - "l SS [AA]AA LLLL DDDD" - copy from i2c to ram
-
-i2cload		lbsr parseinput		; parse commandline into y
-
-; i2cloaddirect - direct entry to do a load with params stored at y
-
-i2cloaddirect	tfr y,x			; save y so we can restore it
-		lbsr i2caddr		; send the address
-		bne i2cstoreerr		; validation error
-
-		lbsr i2csenddone	; wait for last byte read
-		bne i2cloadbuserr	; i2c bus error
-
-		tfr x,y			; reset the parser pointer
-
-		lda ,y+			; skip the type
-
-		lbsr i2crepeatstart	; special repeat start for control
-
-		lda ,y+			; get the slave address
-		ora #1			; r/w bit to high for read
-		lbsr i2cwrite		; send the read slave address
-
-		lda ,y+			; get the type
-		leay a,y		; skip memory address; already sent
-
-		lda ,y+			; get the type
-		cmpa #2			; word?
-		bne i2cloaderr		; validation error
-		ldx ,y++		; get the start of mpu memory
-
-		lda, y+			; get the type
-		cmpa #2			; word?
-		bne i2cloaderr		; validation error
-		ldy ,y			; get the count of bytes to read
-		leay -1,y		; sub 1 for the special read
-
-		lbsr i2cread		; this will return slave address
-					; ignore it
-
-		lbsr i2csenddone	; wait for last byte read
-		bne i2cloadbuserr	; i2c bus error
-
-		lbsr i2cread		; read the slave addres again
-					; again ignore it
-
-		leay ,y			; see if we don't have to loop at all...
-		beq i2cloadoutloop	; because we are reading a single byte
-
-i2cloadnext	lbsr i2csenddone	; wait for the last byte to go
-		bne i2cloadbuserr	; bus error?
-
-		leay -1,y
-		beq i2cloadoutloop	; done?
-
-		lbsr i2cread		; read the i2c byte!
-
-		sta ,x+			; store the byte and advance
-
-		bra i2cloadnext		; get more
-
-; last byte is special - we have one more byte to read
-
-i2cloadoutloop	lbsr i2cnack		; negative ack for last byte
-
-		lbsr i2cread		; dummy read, dont store
-		sta ,x+			; save it to ram
-
-		lbsr i2csenddone	; wait for the pernultimate byte
-					; ignore errors on last byte
-
-		lbsr i2cstop		; send the stop
-
-		lbsr i2cread		; the real last read
-		sta ,x+			; save it to ram
-
-		clra			; good exit
-		rts
-
-i2cloadbuserr	ldx #i2cbuserrormsg	; error message
-		lbsr serialputstr	; print it
-		lbsr i2cstop
-		lda #1			; bad exit
-		rts
-
-i2cloaderr	lbsr i2cstop		; tidy up with a stop
-		lda #1			; bad exit
-		rts
-
 ; shows some help text
+
+helpmsg		fcc 'Commands:'
+		fcb CR
+		fcb LF
+		fcc '  r : show registers'
+		fcb CR
+		fcb LF
+		fcc '  w AAAA B1 B2 B3 ... : write to AAAA bytes B1 B2 B3 ...'
+		fcb CR
+		fcb LF
+		fcc '  d AAAA LLLL : dump from AAAA count LLLL bytes in hex'
+		fcb CR
+		fcb LF
+		fcc '  e EEEE : exit to user code at EEEE'
+		fcb CR
+		fcb LF
+		fcc '  x : reset the monitor'
+		fcb CR
+		fcb LF
+		fcc '  + SSSS WWWW RRRR : write WWWW spi bytes then read RRRR bytes'
+		fcb CR
+		fcb LF
+		fcc '  t : show time'
+		fcb CR
+		fcb LF
+		fcc '  u : show uptime'
+		fcb CR
+		fcb LF
+		fcc '  o OO : output OO on I2C I/O expander port A'
+		fcb CR
+		fcb LF
+		fcc '  c OO : output OO on the latch'
+		fcb CR
+		fcb LF
+		fcc '  b MMMM NNNN : read 1k disk block NNNN into MMMM'
+		fcb CR
+		fcb LF
+		fcc '  m : set 8bit ide and read mbr'
+		fcb CR
+		fcb LF
+		fcc '  h or ? : this help'
+		fcb CR
+		fcb LF
+		fcb CR
+		fcb LF
+		fcb NULL
 
 showhelp	ldx #greetingmsg	; show the greeting
 		lbsr serialputstr	; for the version number
@@ -701,9 +575,38 @@ resetmonitor	ldx $fffe		; get the reset vector
 
 ; time
 
-showtime	ldy #showtimeparams	; setup param block for i2c to rtc
+; days array - each day is 4 bytes long
 
-		lbsr i2cloaddirect	; do the i2c operation
+days		fcc 'Sun'
+		fcb NULL
+		fcc 'Mon'
+		fcb NULL
+		fcc 'Tue'
+		fcb NULL
+		fcc 'Wed'
+		fcb NULL
+		fcc 'Thu'
+		fcb NULL
+		fcc 'Fri'
+		fcb NULL
+		fcc 'Sat'
+		fcb NULL
+
+showtime	lbsr spistart		; mark with start
+
+		clrb
+		lbsr spiwrite		; write address 0
+
+		ldx #timeoutput
+		ldy #8
+
+showtimenext	lbsr spiread
+		stb, x+
+		
+		leay -1,y
+		bne showtimenext
+
+		lbsr spistop		; mark with stop
 
 		ldx #outputbuffer	; setup output buffer
 		ldy #timeoutput		; setup rtc data buffer
@@ -771,23 +674,540 @@ showuptime	ldx #outputbuffer
 		lbsr serialputstr
 		rts
 
-; i2cout - outputs a byte on port a of the i2c io expander at slave $40
+; latchout - "c OO" outputs a byte on the "latch"
 
-i2cout		lbsr parseinput		; parse hexes, filling out inputbuffer
-		lda ,y+			; get the argument
-		cmpa #1			; byte?
-		bne i2couterr		; if not then error
+latchout	lbsr parseinput
+		lda ,y+
+		cmpa #1
+		lbne generalerror
 
-		lda ,y+			; get the byte to output
-		ldx #i2coutbuffer	; setup param block for i2c to rtc
-		sta $12,x		; stick it in the i2c buffer
+		lda ,y+
+		sta LATCH
 
-		ldy #i2coutparams	; get the i2c paramters
-		lbsr i2cstoredirect	; do the i2c operation
-		rts			; propogate error state
-
-i2couterr	lda #1
+		clra
 		rts
+
+; spi store - "+ FFFF WWW RRR..." - writes and reads to the spi bus
+
+spistore	lbsr parseinput		; parse hexes, filling out inputbuffer
+
+		lda ,y+			; get the type
+		cmpa #2			; word?
+		lbne generalerror	; validation error
+		ldu ,y++		; get the start of mpu memory
+
+		lda, y+			; get the type
+		cmpa #2			; word?
+		lbne generalerror	; validation error
+		ldx ,y++		; get the count of bytes to read
+
+		lda, y+			; get the type
+		cmpa #2			; word?
+		lbne generalerror	; validation error
+		ldy ,y			; get the count of bytes to read
+
+		lbsr spistart		; mark with start
+
+spistorenext	leax ,x
+		beq spistoredone
+
+		ldb ,u+			; get data to write
+		lbsr spiwrite		; write it
+
+		leax -1,x
+		bra spistorenext
+
+spistoredone
+spiloadnext	leay, y
+		beq spiloaddone
+
+		lbsr spiread
+		stb, u+
+		
+		leay -1,y
+
+		bra spiloadnext
+
+spiloaddone	lbsr spistop		; mark with stop
+
+		clra
+		rts
+
+; ideidentify - print info about the device
+
+serialnomsg	fcc 'Serial number: '
+		fcb NULL
+firmwarerevmsg	fcc 'Firmware revision: '
+		fcb NULL
+modelnomsg	fcc 'Model number: '
+		fcb NULL
+
+ideidentify	lda #$ec
+		lbsr simpleidecomm
+
+		ldx #ideidentifyblk
+		lbsr idelowlevelread
+
+		ldx #outputbuffer
+		ldy #serialnomsg
+		lbsr concatstr
+		ldy #ideidentifyblk+20
+		lda #20
+		lbsr concatstrn
+		ldy #newlinemsg
+		lbsr concatstr
+		clr ,x
+		ldx #outputbuffer
+		lbsr serialputstr
+
+		ldx #outputbuffer
+		ldy #firmwarerevmsg
+		lbsr concatstr
+		ldy #ideidentifyblk+46
+		lda #8
+		lbsr concatstrn
+		ldy #newlinemsg
+		lbsr concatstr
+		clr ,x
+		ldx #outputbuffer
+		lbsr serialputstr
+
+		ldx #outputbuffer
+		ldy #modelnomsg
+		lbsr concatstr
+		ldy #ideidentifyblk+54
+		lda #40
+		lbsr concatstrn
+		ldy #newlinemsg
+		lbsr concatstr
+		clr ,x+
+		ldx #outputbuffer
+		lbsr serialputstr
+
+		clra
+		rts
+
+; idereadsector - < L0 L1 NN MMMM - read NN sectors from L0 L1 into MMMM
+
+idereadsector	lbsr parseinput
+
+		lda ,y+			; get the type
+		cmpa #1			; word?
+		lbne generalerror	; validation error
+		lda ,y+
+		sta IDELBA0
+
+		lda ,y+			; get the type
+		cmpa #1			; word?
+		lbne generalerror	; validation error
+		lda ,y+
+		sta IDELBA1
+
+		clr IDELBA2
+		clr IDELBA3
+
+		lda ,y+			; get the type
+		cmpa #1			; word?
+		lbne generalerror	; validation error
+		lda ,y+		
+		sta IDECOUNT
+
+		lda ,y+
+		cmpa #2
+		lbne generalerror
+		ldx, y++
+
+		lda #$20
+		lbsr simpleidecomm
+
+readsectorloop	lbsr idelowlevelread
+
+		lda IDECOUNT
+		bne readsectorloop
+
+		clra
+		rts
+
+; readblock - b MMMM NNNN - read 1k block NNNN into MMMM
+
+readblock	lbsr parseinput
+
+		lda ,y+			; get the type
+		cmpa #2			; word?
+		lbne generalerror	; validation error
+		ldx ,y++
+
+		lda ,y+			; get the type
+		cmpa #2			; word?
+		lbne generalerror	; validation error
+		ldy ,y++
+
+		lbsr readfsblock
+
+		clra
+	
+		rts
+
+; idemount - m - sets 8 bit mode and reads the mbr
+
+partstartmsg	fcc 'Partition starts at: '
+		fcb NULL
+nombrmsg	fcc 'No MBR found, assuming single partition'
+		fcb CR
+		fcb LF
+		fcb NULL
+
+idemount	lda #$01		; 8 bit enable
+		sta IDEFEATURES
+
+		lda #$ef		; set features
+		lbsr simpleidecomm
+		lbsr idewaitnotbusy
+
+		clr IDELBA0
+		clr IDELBA1
+		clr IDELBA2
+		clr IDELBA3
+
+		lda #1
+		sta IDECOUNT
+
+		lda #$20
+		lbsr simpleidecomm
+
+		ldx #idembrblk
+		lbsr idelowlevelread
+
+		ldd idembrblk+$01fe
+		exg a,b
+		cmpd #$aa55
+		beq idemountmbr
+
+		ldx #nombrmsg
+		lbsr serialputstr
+
+		clrd
+		std firstpartsects
+
+		rts
+
+idemountmbr	ldx #outputbuffer
+		ldy #partstartmsg
+		lbsr concatstr
+
+		ldd idembrblk+$01be+$08
+		exg a,b
+		std firstpartsects
+		lbsr wordtoaschex
+
+		ldy #newlinemsg
+		lbsr concatstr
+		clr ,x+
+
+		ldx #outputbuffer
+		lbsr serialputstr
+
+		rts
+
+;;; END OF HIGH LEVEL COMMANDS
+
+;;; IDE
+
+; run the trivial command in 'a', assuming other params are setup
+
+simpleidecomm	ldb #%11100000
+		stb IDEHEADS
+		sta IDECOMMAND
+		clra
+		rts
+
+idewaitnotbusy	lda IDESTATUS
+		anda #$80
+		bne idewaitnotbusy
+		rts
+
+idewaitfordata	lda IDESTATUS
+		anda #$08
+		beq idewaitfordata
+		rts
+
+idelowlevelread	ldy #512
+		lbsr idewaitnotbusy
+		lbsr idewaitfordata
+readbyteloop	lda IDEDATA
+		sta ,x+
+		leay -1,y
+		bne readbyteloop
+		rts
+
+;;; FS
+
+; readfsblock - reads 1k block at y into block buffer at x
+
+readfsblock	tfr y,d
+		lslb
+		lsla			; multiple x by 2->sectors
+		addd firstpartsects	; add sector offset for the partition
+		
+		stb IDELBA0
+		sta IDELBA1
+		clr IDELBA2
+		clr IDELBA3
+
+		lda #2
+		sta IDECOUNT
+
+		lda #$20
+		lbsr simpleidecomm
+
+		lbsr idelowlevelread
+		lbsr idelowlevelread
+
+		rts
+
+;;; VIA
+
+viainit		clra
+		sta PORTA6522
+		ora #SS
+		ora #SCLK
+		ora #MOSI
+		sta DDRA6522
+		rts
+
+;;; SPI low level routines
+
+spistart	lda #SS			; assert chip select on 1305
+		sta PORTA6522
+		nop			; wait for read
+
+		rts
+
+spistop		clra			; deassert chip select
+		sta PORTA6522
+		nop			; pause
+
+		rts
+
+; spiwrite - send the byte in b
+
+spiwrite
+
+; bit 7
+
+		lda #SS			; ensure chip select
+		lslb			; move the bit to send into carry
+		adca #0			; add carry so low bit is set for out
+		sta PORTA6522		; output
+		ora #SCLK		; assert the clock by oring it in
+		sta PORTA6522		; output
+		nop			; wait a bit
+		eora #SCLK		; clear the clock
+		sta PORTA6522
+		nop			; output and wait
+
+; bit 6
+
+		lda #SS
+		lslb
+		adca #0
+		sta PORTA6522
+		ora #SCLK
+		sta PORTA6522
+		nop
+		eora #SCLK
+		sta PORTA6522
+		nop
+
+; bit 5
+
+		lda #SS
+		lslb
+		adca #0
+		sta PORTA6522
+		ora #SCLK
+		sta PORTA6522
+		nop
+		eora #SCLK
+		sta PORTA6522
+		nop
+
+; bit 4
+
+		lda #SS
+		lslb
+		adca #0
+		sta PORTA6522
+		ora #SCLK
+		sta PORTA6522
+		nop
+		eora #SCLK
+		sta PORTA6522
+		nop
+
+; bit 3
+
+		lda #SS
+		lslb
+		adca #0
+		sta PORTA6522
+		ora #SCLK
+		sta PORTA6522
+		nop
+		eora #SCLK
+		sta PORTA6522
+		nop
+
+; bit 2
+
+		lda #SS
+		lslb
+		adca #0
+		sta PORTA6522
+		ora #SCLK
+		sta PORTA6522
+		nop
+		eora #SCLK
+		sta PORTA6522
+		nop
+
+; bit 1
+
+		lda #SS
+		lslb
+		adca #0
+		sta PORTA6522
+		ora #SCLK
+		sta PORTA6522
+		nop
+		eora #SCLK
+		sta PORTA6522
+		nop
+
+; bit 0
+
+		lda #SS
+		lslb
+		adca #0
+		sta PORTA6522
+		ora #SCLK
+		sta PORTA6522
+		nop
+		eora #SCLK
+		sta PORTA6522
+		nop
+
+		rts
+
+spiread		clrb
+
+; bit 7
+
+		lda #SS
+		ora #SCLK
+		sta PORTA6522
+		nop
+		lda PORTA6522
+		rola
+		rolb
+		lda #SS
+		sta PORTA6522
+		nop
+
+; bit 6
+
+		lda #SS
+		ora #SCLK
+		sta PORTA6522
+		nop
+		lda PORTA6522
+		rola
+		rolb
+		lda #SS
+		sta PORTA6522
+		nop
+
+; bit 5
+
+		lda #SS
+		ora #SCLK
+		sta PORTA6522
+		nop
+		lda PORTA6522
+		rola
+		rolb
+		lda #SS
+		sta PORTA6522
+		nop
+
+; bit 4
+
+		lda #SS
+		ora #SCLK
+		sta PORTA6522
+		nop
+		lda PORTA6522
+		rola
+		rolb
+		lda #SS
+		sta PORTA6522
+		nop
+
+; bit 3
+
+		lda #SS
+		ora #SCLK
+		sta PORTA6522
+		nop
+		lda PORTA6522
+		rola
+		rolb
+		lda #SS
+		sta PORTA6522
+		nop
+
+; bit 2
+
+		lda #SS
+		ora #SCLK
+		sta PORTA6522
+		nop
+		lda PORTA6522
+		rola
+		rolb
+		lda #SS
+		sta PORTA6522
+		nop
+
+; bit 1
+
+		lda #SS
+		ora #SCLK
+		sta PORTA6522
+		nop
+		lda PORTA6522
+		rola
+		rolb
+		lda #SS
+		sta PORTA6522
+		nop
+
+; bit 0
+
+		lda #SS
+		ora #SCLK
+		sta PORTA6522
+		nop
+		lda PORTA6522
+		rola
+		rolb
+		lda #SS
+		sta PORTA6522
+		nop
+
+		rts
+
+
 
 ;;; SERIAL PORT ;;;
 
@@ -835,124 +1255,6 @@ serialgetstr	bsr serialgetchar	; get a char in a
 		sta ,x+			; add it to string
 		bra serialgetstr	; get more
 serialgetstrout	clr ,x+			; add a null
-		rts
-
-;;; I2C ;;;
-
-i2cinit		lda #$80		; for reg S0' which is our address
-		sta I2CHIGH
-		lda #$55
-		sta I2CLOW		; store $55 (own address = $aa)
-		lda #$a0		; for reg S1
-		sta I2CHIGH
-		lda #%00011100
-		sta I2CLOW		; clock = 12mhz, scl freq = 90khz
-		lda #$c1
-		sta I2CHIGH		; enable i2c
-		rts
-
-i2cdelay	pshs y
-		ldy #$8000
-		lbsr delay
-		puls y
-		rts
-
-i2cbusbusycheck	pshs x
-		ldx #$2000
-i2cbusbusypoll	leax -1,x
-		beq i2cbusbusyto
-		lda I2CHIGH		; get status
-		bita #1			; check busy bit
-		beq i2cbusbusypoll	; fall through when busy bit is 1
-		clra
-		puls x
-		rts
-i2cbusbusyto	ldx #i2ctimeoutmsg
-		lbsr serialputstr
-		lda #1
-		puls x
-		rts
-
-i2csenddone	pshs x
-		ldx #$4000
-i2csendpoll	leax -1,x
-		beq i2csendtimeout
-		lda I2CHIGH
-		bita #$80
-		bne i2csendpoll
-		bita #$0a		; clears z if i2c bus error
-		puls x
-		rts
-i2csendtimeout	ldx #i2ctimeoutmsg
-		lbsr serialputstr
-		lda #1
-		puls x
-		rts
-		
-i2cstart	lda #$c5
-		sta I2CHIGH		; send start
-		rts
-
-i2crepeatstart	lda #$45
-		sta I2CHIGH		; repeat start
-		rts
-
-i2cstop		lda #$c3
-		sta I2CHIGH		; send stop
-		rts
-
-i2cnack		lda #$40
-		sta I2CHIGH		; send nack
-		rts
-
-i2cack		lda #41			; send ack
-		sta I2CHIGH
-		rts
-
-i2cwrite	sta I2CLOW		; send data
-		rts
-
-i2cread		lda I2CLOW		; read data
-		rts
-
-; i2caddr - midlayer sub for for sending i2c addr and memory addr
-
-i2caddr		lda ,y+			; get the type
-		cmpa #1			; is it a word?
-		bne i2caddrerr		; validation error
-
-		lbsr i2cbusbusycheck	; wait for bus availability
-		bne i2caddrbuserr	; i2c bus busy timeout
-
-		lda ,y+			; get the slave address
-		bsr i2cwrite		; set the slave address
-
-		bsr i2cstart		; start of the transfer
-
-		bsr i2csenddone
-		bne i2caddrbuserr	; i2c bus error
-
-		ldb ,y+			; get the type
-
-i2caddrnext	lda ,y+			; read address, high in a
-		bsr i2cwrite
-
-		bsr i2csenddone
-		bne i2caddrbuserr	; i2c bus error
-
-		decb
-		bne i2caddrnext
-
-i2caddrout	clra
-		rts
-
-i2caddrbuserr	ldx #i2cbuserrormsg	; bus error message
-		lbsr serialputstr	; show it
-		lda #1			; still a clean exit though
-		rts
-
-i2caddrerr	bsr i2cstop		; tidy up with a stop
-		lda #1			; bad exit
 		rts
 
 ;;; STRINGS ;;;
@@ -1072,6 +1374,15 @@ concatstr	lda ,y+			; get the char in y
 		sta ,x+			; otherwise add it to x
 		bra concatstr		; go back for more
 concatstrout	rts
+
+; concatstrn - add a chars of y to x, not ocpying the null
+
+concatstrn	ldb ,y+
+		stb ,x+
+		deca
+		beq concatstrnout
+		bra concatstrn
+concatstrnout	rts
 
 ;;; MISC ;;;
 
