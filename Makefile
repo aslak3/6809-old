@@ -4,18 +4,30 @@ FLASHER = ./flasher/flasher
 PROG_SERIAL = /dev/ttyUSB1
 6809_SERIAL = /dev/ttyUSB0
 
-BINS = romonlytest.bin ramtest.bin serialtest.bin monitor.bin
+BIN = monitor.bin
+MAP = monitor.map
+INC = monitor.inc
 
-all: $(BINS)
+MONITOR_ASM = monitor.asm
+ASMS = jumptable.asm misc.asm ramvars.asm storage.asm viaetc.asm serial.asm \
+	strings.asm
 
-%.bin: %.hex
+all: $(BIN) $(INC)
+
+%.bin: %.ihx
 	hex2bin -out $@ $<
+
+%.ihx: %.rel
+	aslink -nmwi $<
 	
-%.hex: %.a
-	a09 -X $<
+%.rel: $(ASMS) $(MONITOR_ASM)
+	as6809 -oxs $(MONITOR_ASM)
+
+$(INC): $(MAP)
+	./map2inc.pl < $(MAP) > $(INC)
 
 clean:
-	rm -f $(BINS) *.hex *.bin
+	rm -f $(BIN) $(INC) *.rel *.ihx *.map *.sym
 
 doupload:
 	$(UPLOAD) -f $(BIN) -s $(PROG_SERIAL)
