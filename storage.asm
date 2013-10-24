@@ -140,7 +140,7 @@ moreinode:	lda ,y+
 		
 		ldx inodeptr
 		leax 14,x
-		ldb #7
+		ldb #8
 datawordswaps:	lbsr wordswap
 		leax 2,x
 		decb
@@ -154,11 +154,36 @@ datawordswaps:	lbsr wordswap
 
 fsreaddata:	ldb #7
 		ldu #inode+14
+
 moredatablks:	ldy ,u++
 		beq fsreaddataout
 		lbsr fsreadblk
 		decb
 		bne moredatablks
+
+; indirect block
+
+		pshs x
+		ldx #scratchblk
+		ldy ,u++
+		beq fsreaddataout
+		lbsr fsreadblk
+
+		ldb #0x20		; read upto another 32kbyte
+		ldx #scratchblk
+swapindir:	lbsr wordswap
+		leax 1,x
+		decb
+		bne swapindir
+
+		ldu #scratchblk
+		ldb #0x20
+		puls x
+moreindirblks:	ldy ,u++
+		beq fsreaddataout
+		lbsr fsreadblk
+		decb
+		bne moreindirblks
 
 fsreaddataout:	rts
 
