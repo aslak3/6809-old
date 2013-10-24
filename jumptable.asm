@@ -25,3 +25,6 @@ jfsreadfile::		jmp fsreadfile
 
 jdelay::		jmp delay
 jwordswap::		jmp wordswap
+
+;; 14/10/2010 extensions
+jserialgetbyte::	jmp serialgetbyte
