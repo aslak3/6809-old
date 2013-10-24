@@ -18,10 +18,10 @@
 
 ; ascii constants
 
+NULL            .equ 0x00
+BS              .equ 0x08
 CR              .equ 0x0d
 LF              .equ 0x0a
-BS              .equ 0x10
-NULL            .equ 0x00
 
 ; serial port addresses - for readability dupe the read/write locations
 
@@ -67,6 +67,43 @@ IDELBA3		.equ 0x8406
 IDEHEADS	.equ 0x8406
 IDESTATUS	.equ 0x8407
 IDECOMMAND	.equ 0x8407
+
+; 88681
+
+MRA88681	.equ 0x8500 
+SRA88681	.equ 0x8501
+CSRA88681	.equ 0x8501
+CRA88681	.equ 0x8502
+THRA88681	.equ 0x8503
+RHRA88681	.equ 0x8503
+
+OPCR88681	.equ 0x850d
+OPRSET88681	.equ 0x850e
+OPRRESET88681	.equ 0x850f
+
+; ay
+
+AY		.equ 0x8500 
+AYLATCHADDR	.equ AY		; address latch
+AYWRITEADDR	.equ AY+1	; write
+AYREADADDR	.equ AY		; read
+
+AYAFREQL	.equ 0x00	; tone generator A frequency (low 8 bits)
+AYAFREQH	.equ 0x01	; tone generator A frequency (high 4 bits)
+AYBFREQL	.equ 0x02	; tone generator B frequency (low 8 bits)
+AYBFREQH	.equ 0x03	; tone generator B frequency (high 4 bits)
+AYCFREQL	.equ 0x04	; tone generator C frequency (low 8 bits)
+AYCFREQH	.equ 0x05	; tone generator C frequency (high 4 bits)
+AYNOISEFREQ	.equ 0x06	; noise generator frequency (low 5 bits)
+AYCTRL		.equ 0x07	; I/O port and mixer control
+AYAAMPL		.equ 0x08	; channel A amplitude (4 bits), envelope enable
+AYBAMPL		.equ 0x09	; channel B amplitude (4 bits), envelope enable
+AYCAMPL		.equ 0x0a	; channel C amplitude (4 bits), envelope enable
+AYENVFREQL	.equ 0x0b	; envelope frequency (low 8 bits)
+AYENVFREQH	.equ 0x0c	; envelope frequency (high 8 bits)
+AYENVSHAPE	.equ 0x0d	; envelope shape (low 4 bits)
+AYIOA		.equ 0x0e	; I/O port A data
+AYIOB		.equ 0x0f	; I/O port B data
 
 ; memory
 
