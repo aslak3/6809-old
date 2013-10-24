@@ -80,8 +80,21 @@ commandarray:	.word dumpmemory
 		.ascii 'f'
 		.word listdirbyinode
 		.ascii 'l'
+		.word playay
+		.ascii 'p'
+		.word inay
+		.ascii '['
 		.word 0x0000
 		.byte NULL
+
+bootsound:	.byte 0x0b, 0x00, 0x0c, 0x03, 0xd, 0x09 	; envelope
+		.byte 0x07, 0xfe, 0x08, 0x18
+		.byte 0x00, 0x00, 0x01, 0x01
+		.byte 0xff, 0xb0				; wait
+		.byte 0x0b, 0x00, 0x0c, 0x02, 0xd, 0x09
+		.byte 0x00, 0x40, 0x01, 0x00
+		.byte 0xff, 0x80				; wait
+		.byte 0xff, 0x00				; end
 
 ; END OF DATA
 
@@ -98,6 +111,7 @@ zeroram:	clr ,x+
 
 		lbsr serialinit		; setup the serial port
 		lbsr viainit		; prepare the via
+
 
 		ldx #resetmsg		; show prompt for flash
 		lbsr serialputstr
@@ -121,6 +135,9 @@ romcopy:	lda ,x+			; read in
 
 normalstart:	ldx #greetingmsg	; greetings!
 		lbsr serialputstr	; output the greeting
+
+		ldx #bootsound		; beep!
+		lbsr ay8910play		; :)
 
 		clra			; reset uptime
 		clrb			; both bytes
@@ -697,6 +714,38 @@ listdirnotdir:	ldx #notdirmsg
 		lda #1
 		rts
 
+playay:		lbsr parseinput
+
+		lda ,y+
+		cmpa #2
+		lbne generalerror
+		ldx ,y++
+
+		lbsr ay8910play
+
+		clra
+		rts
+
+inay:		lda #AYCTRL
+		ldb #0x3f
+		lbsr ay8910write
+
+		lda #AYIOA
+		sta AYLATCHADDR
+		lda AYREADADDR
+		sta LATCH
+
+		ldx #outputbuffer
+		lbsr bytetoaschex
+		ldy #newlinemsg
+		lbsr concatstr
+		clr ,x+
+		ldx #outputbuffer
+		lbsr serialputstr
+
+		clra
+		rts
+
 ;;; END OF HIGH LEVEL COMMANDS
 
 ; flasher
@@ -758,3 +807,4 @@ verflash:	lda ,y+			; get the byte
 		.include 'serial.asm'
 		.include 'strings.asm'
 		.include 'misc.asm'
+		.include 'ay8910.asm'

@@ -6,6 +6,7 @@
 
 userregs:	.rmb 11
 inputbuffer:	.rmb 256
+inputcount:	.rmb 1
 outputbuffer:	.rmb 256
 parambuffer:	.rmb 256
 dumppointer:	.rmb 2

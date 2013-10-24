@@ -10,7 +10,7 @@ INC = monitor.inc
 
 MONITOR_ASM = monitor.asm
 ASMS = jumptable.asm misc.asm ramvars.asm storage.asm viaetc.asm serial.asm \
-	strings.asm
+	strings.asm ay8910.asm
 
 all: $(BIN) $(INC)
 
