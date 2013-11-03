@@ -11,6 +11,7 @@ INC = monitor.inc
 MONITOR_ASM = monitor.asm
 ASMS = jumptable.asm misc.asm ramvars.asm storage.asm viaetc.asm serial.asm \
 	strings.asm ay8910.asm
+INCS = hardware.inc
 
 all: $(BIN) $(INC)
 
@@ -20,7 +21,7 @@ all: $(BIN) $(INC)
 %.ihx: %.rel
 	aslink -nmwi $<
 	
-%.rel: $(ASMS) $(MONITOR_ASM)
+%.rel: $(ASMS) $(INCS) $(MONITOR_ASM)
 	as6809 -oxs $(MONITOR_ASM)
 
 $(INC): $(MAP)

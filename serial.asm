@@ -2,19 +2,28 @@
 
 ; serial port setup
 
-serialinit:	lda #0b00000011		; master reset
-		sta SERIALCR
-		; divider (=16), databits (=8n1), no rts and no interrupts
-		lda #0b00010101
-		sta SERIALCR
+serialinit:	lda #0b00010011
+		sta MRA88681
+		lda #0b00000111
+		sta MRA88681
+		lda #0b00000000		; high bit rates
+		lda #0b00000101		; enable tx and rx
+		sta CRA88681
+		lda #0b10000000		; extend on rx
+		sta CRA88681
+		lda #0b10100000		; extend on tx
+		sta CRA88681
+		lda #0b10001000		; 115.2
+		sta CSRA88681
+
 		rts
 
 ; put the char in a, returning when its sent - corrupts b
 
-serialputchar:	ldb SERIALSR
-		andb #0b00000010	; transmit empty
+serialputchar:	ldb SRA88681
+		andb #0b00000100	; transmit empty
 		beq serialputchar	; wait for port to be idle
-		sta SERIALTX		; output the char
+		sta THRA88681		; output the char
 		rts
 
 ; puts the null terminated string pointed to by x
@@ -27,10 +36,10 @@ serialputstro:	rts
 
 ; serialgetchar - gets a char, putting it in a
 
-serialgetchar:	lda SERIALSR		; get status
+serialgetchar:	lda SRA88681		; get status
 		anda #0b00000001	; input empty?
 		beq serialgetchar	; go back and look again
-		lda SERIALRX		; get the char into a
+		lda RHRA88681		; get the char into a
 serialgetcharo:	rts
 		
 ; serialgetstr - gets a line, upto a cr, filling x as we go
@@ -50,7 +59,7 @@ serialecho:	bsr serialputchar	; echo it
 serialgetstro:	clr ,x+			; add a null
 		rts
 serialbs:	tst inputcount		; see if the char count is 0
-		bne serialgetstr2	; do nothing if already zero
+		beq serialgetstr2	; do nothing if already zero
 		dec inputcount		; reduce count by 1
 		clr ,x			; null the current char
 		leax -1,x		; move the pointer back 1

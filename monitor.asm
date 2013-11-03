@@ -33,7 +33,7 @@
 
 ; START OF GLOBAL READ-ONLY DATA
 
-greetingmsg:	.asciz '\r\n6809 Monitor v0.0.5.\r\n\r\n'
+greetingmsg:	.asciz '\r\n6809 Monitor v0.0.0.0.6.\r\n\r\n'
 youtypedmsg:	.asciz 'You typed: '
 promptmsg:	.asciz 'Monitor: > '
 nosuchmsg:	.asciz 'No such command\r\n'
@@ -87,13 +87,13 @@ commandarray:	.word dumpmemory
 		.word 0x0000
 		.byte NULL
 
-bootsound:	.byte 0x0b, 0x00, 0x0c, 0x03, 0xd, 0x09 	; envelope
+bootsound:	.byte 0x0b, 0x00, 0x0c, 0x06, 0x0d, 0x09 	; envelope
 		.byte 0x07, 0xfe, 0x08, 0x18
-		.byte 0x00, 0x00, 0x01, 0x01
-		.byte 0xff, 0xb0				; wait
-		.byte 0x0b, 0x00, 0x0c, 0x02, 0xd, 0x09
-		.byte 0x00, 0x40, 0x01, 0x00
-		.byte 0xff, 0x80				; wait
+		.byte 0x00, 0x00, 0x01, 0x02
+		.byte 0xff, 0xff, 0xff, 0x60			; wait
+		.byte 0x0b, 0x00, 0x0c, 0x04, 0x0d, 0x09
+		.byte 0x00, 0x80, 0x01, 0x00
+		.byte 0xff, 0xf0				; wait
 		.byte 0xff, 0x00				; end
 
 ; END OF DATA
@@ -111,7 +111,6 @@ zeroram:	clr ,x+
 
 		lbsr serialinit		; setup the serial port
 		lbsr viainit		; prepare the via
-
 
 		ldx #resetmsg		; show prompt for flash
 		lbsr serialputstr
@@ -774,7 +773,7 @@ outflash:	lda ,x+			; get the byte from ram
 
 ; circa 10ms delay between blocks
 
-		ldx #20000		; setup delay counter
+		ldx #30000		; setup delay counter
 flashdelayloop:	leax -1,x		; dey
 		bne flashdelayloop
 
