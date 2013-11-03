@@ -80,8 +80,8 @@ FILE *openserialport(char *portdevice)
 	struct termios options;
 
 	tcgetattr(serialfd, &options);
-	cfsetispeed(&options, B57600);
-	cfsetospeed(&options, B57600);
+	cfsetispeed(&options, B115200);
+	cfsetospeed(&options, B115200);
 	options.c_cflag |= CS8;
 	tcsetattr(serialfd, TCSANOW, &options);
 
@@ -158,7 +158,6 @@ int flashfile(FILE *serialfp, char *filename)
 			perror("Unable to read serial when waiting for block");
 			return 1;
 		}
-
 
 		bytessent += bytesread;
 		printf("#");
