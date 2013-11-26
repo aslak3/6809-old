@@ -4,6 +4,7 @@
 
 		.org 0
 
+spatentry:	.rmb 2
 userregs:	.rmb 11
 inputbuffer:	.rmb 256
 inputcount:	.rmb 1
@@ -25,3 +26,5 @@ scratchdirblk:	.rmb 1024
 inode:		.rmb 32
 dirinode:	.rmb 32
 inodeptr:	.rmb 2
+xmodemblkcount:	.rmb 1
+xmodemchecksum:	.rmb 1

@@ -26,5 +26,9 @@ jfsreadfile::		jmp fsreadfile
 jdelay::		jmp delay
 jwordswap::		jmp wordswap
 
-;; 14/10/2010 extensions
+;; 14/10/2013 extensions
 jserialgetbyte::	jmp serialgetbyte
+
+;; 15/11/2013 extensions
+jay8910playnote::	jmp ay8910playnote
+jay8910playtune::	jmp ay8910playtune

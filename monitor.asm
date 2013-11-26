@@ -59,7 +59,7 @@ commandarray:	.word dumpmemory
 		.word showhelp
 		.ascii '?'			; same command different letter
 		.word resetmonitor
-		.ascii 'x'
+		.ascii 'q'
 		.word showuptime
 		.ascii 'u'
 		.word latchout
@@ -82,19 +82,12 @@ commandarray:	.word dumpmemory
 		.ascii 'l'
 		.word playay
 		.ascii 'p'
-		.word inay
-		.ascii '['
+		.word xmodem
+		.ascii 'x'
 		.word 0x0000
 		.byte NULL
 
-bootsound:	.byte 0x0b, 0x00, 0x0c, 0x06, 0x0d, 0x09 	; envelope
-		.byte 0x07, 0xfe, 0x08, 0x18
-		.byte 0x00, 0x00, 0x01, 0x02
-		.byte 0xff, 0xff, 0xff, 0x60			; wait
-		.byte 0x0b, 0x00, 0x0c, 0x04, 0x0d, 0x09
-		.byte 0x00, 0x80, 0x01, 0x00
-		.byte 0xff, 0xf0				; wait
-		.byte 0xff, 0x00				; end
+bootbeeps:	.byte 8, 1, 0xff
 
 ; END OF DATA
 
@@ -111,6 +104,7 @@ zeroram:	clr ,x+
 
 		lbsr serialinit		; setup the serial port
 		lbsr viainit		; prepare the via
+		clr LATCH		; blank the latch
 
 		ldx #resetmsg		; show prompt for flash
 		lbsr serialputstr
@@ -135,8 +129,8 @@ romcopy:	lda ,x+			; read in
 normalstart:	ldx #greetingmsg	; greetings!
 		lbsr serialputstr	; output the greeting
 
-		ldx #bootsound		; beep!
-		lbsr ay8910play		; :)
+		ldx #bootbeeps
+		lbsr ay8910playtune	; play booting beeps
 
 		clra			; reset uptime
 		clrb			; both bytes
@@ -169,6 +163,7 @@ swinterrupt:	ldx #outputbuffer	; setup the "break" message
 		ldy #breakatmsg		; ...
 		lbsr concatstr		; append it
 		leay ,s			; get the new stack pointr
+		sty spatentry
 		ldd 10,y		; the pc is 10 bytes in
 		lbsr wordtoaschex	; convert it to ascii
 		ldy #newlinemsg		; adding a newline
@@ -349,45 +344,46 @@ umsg:		.asciz '  U: '
 pcmsg:		.asciz '  PC: '
 
 showregisters:	ldx #outputbuffer	; set output buffer
+		ldu spatentry
 
 		ldy #ccmsg		; get the 'C: '
 		lbsr concatstr		; concat it onto outputbuffer
-		lda STACKEND+1-12	; get the register value
+		lda 0,u			; get the register value
 		lbsr bytetoaschex	; convert and concat it
 
 		ldy #amsg		; same again
 		lbsr concatstr		; ...
-		lda STACKEND+1-11	; ...
+		lda 1,u			; ...
 		lbsr bytetoaschex	; ...
 
 		ldy #bmsg
 		lbsr concatstr
-		lda STACKEND+1-10
+		lda 2,u
 		lbsr bytetoaschex
 
 		ldy #dpmsg
 		lbsr concatstr
-		lda STACKEND+1-9
+		lda 3,u
 		lbsr bytetoaschex
 
 		ldy #xmsg
 		lbsr concatstr
-		ldd STACKEND+1-8
+		ldd 4,u
 		lbsr wordtoaschex
 
 		ldy #ymsg
 		lbsr concatstr
-		ldd STACKEND+1-6
+		ldd 6,u
 		lbsr wordtoaschex
 
 		ldy #umsg
 		lbsr concatstr
-		ldd STACKEND+1-4
+		ldd 8,u
 		lbsr wordtoaschex
 
 		ldy #pcmsg
 		lbsr concatstr
-		ldd STACKEND+1-2
+		ldd 10,u
 		lbsr wordtoaschex
 
 		ldy #newlinemsg
@@ -409,7 +405,6 @@ helpmsg:	.ascii 'Commands:\r\n'
 		.ascii '  x : reset the monitor\r\n'
 		.ascii '  + SSSS WWWW RRRR : write WWWW spi bytes then read RRRR bytes\r\n'
 		.ascii '  u : show uptime\r\n'
-		.ascii '  o OO : output OO on I2C I/O expander port A\r\n'
 		.ascii '  c OO : output OO on the latch\r\n'
 		.ascii '  m : set 8bit ide and read mbr\r\n'
 		.ascii '  b MMMM NNNN : read 1k disk block NNNN into MMMM\r\n'
@@ -720,30 +715,66 @@ playay:		lbsr parseinput
 		lbne generalerror
 		ldx ,y++
 
-		lbsr ay8910play
+		lbsr ay8910playtune
 
 		clra
 		rts
 
-inay:		lda #AYCTRL
-		ldb #0x3f
-		lbsr ay8910write
+; x MMMM - read a xmodem upload into memory starting at MMMM
 
-		lda #AYIOA
-		sta AYLATCHADDR
-		lda AYREADADDR
-		sta LATCH
+xmodem:		lbsr parseinput
 
-		ldx #outputbuffer
-		lbsr bytetoaschex
-		ldy #newlinemsg
-		lbsr concatstr
-		clr ,x+
-		ldx #outputbuffer
-		lbsr serialputstr
+		lda ,y+
+		cmpa #2
+		lbne generalerror
+		ldx ,y++
+
+blockloop:	lbsr serialgetchar	; get the "header byte"
+		cmpa #EOT		; EOT for end of file
+		beq xmodemout		; if so then we are done
+		cmpa #SOH		; SOH for start of block
+		bne xmodemerr		; if not then this is an error
+
+		lbsr serialgetchar	; blocks so far
+		sta xmodemblkcount	; store the number of blocks
+		lbsr serialgetchar	; 255 less blocks so far
+
+		clr xmodemchecksum	; clear the checksum
+
+		ldb #0x80		; 128 bytes per block
+byteloop:	lbsr serialgetchar	; get the byte for th efile
+		sta ,x+			; store the byte
+		adda xmodemchecksum	; add the received byte the checksum
+		sta xmodemchecksum	; store the checksum on each byte
+		decb			; decrement our byte counter
+		bne byteloop		; see if there are more bytes
+		
+		lbsr serialgetchar	; get the checksum from sender
+		cmpa xmodemchecksum	; check it against the one we made
+		bne blockbad		; if no good, handle it
+
+		lda #ACK		; if good, then ACK the block
+		lbsr serialputchar	; send the ACK
+
+		bra blockloop		; get more blocks
+
+blockbad:	lda #NAK		; oh no, it was bad
+		lbsr serialputchar	; send a NAK; sender resends block
+
+		leax -0x80,x		; move back to start of the block
+		
+		bra blockloop		; try to get the same block again
+
+xmodemout:	lda #ACK		; at end of file, ACK the whole file
+		lbsr serialputchar
+
+		
 
 		clra
 		rts
+
+xmodemerr:	lda #1
+		rts		
 
 ;;; END OF HIGH LEVEL COMMANDS
 
@@ -773,7 +804,7 @@ outflash:	lda ,x+			; get the byte from ram
 
 ; circa 10ms delay between blocks
 
-		ldx #30000		; setup delay counter
+		ldx #20000		; setup delay counter
 flashdelayloop:	leax -1,x		; dey
 		bne flashdelayloop
 

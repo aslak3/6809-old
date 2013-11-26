@@ -3,13 +3,6 @@
 ; 10xx - io
 ; 11xx - rom
 
-; io map
-; 10xx x000 xxxx xxxX - serial
-; 10xx x001 xxxx xxxX - unused
-; 10xx x010 xxxx xxxx - simple diagnostic latch
-; 10xx x011 xxxx XXXX - 6522
-; 10xx x100 xxxx xXXX - ide port
-
 ; ram map
 ; 0000 -> 0fff - temp storage (stack at 0fff)
 ; 4000 -> 7fff - 16kb for rom when uploading
@@ -22,6 +15,10 @@ NULL            .equ 0x00
 BS              .equ 0x08
 CR              .equ 0x0d
 LF              .equ 0x0a
+SOH		.equ 0x01
+ACK		.equ 0x06
+NAK		.equ 0x15
+EOT		.equ 0x04
 
 ; 88681
 
@@ -112,6 +109,7 @@ ROMCOPYSTART    .equ 0x4000
 ROMCOPYEND      .equ 0x7fff
 
 STACKEND	.equ 0x1fff
+USERSTACKEND	.equ 0x2800
 
 PCOFFSET	.equ 10
 
