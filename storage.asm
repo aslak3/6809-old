@@ -124,7 +124,7 @@ fsreadinode:	pshs x,y,d
 
 		clra
 		puls b			; get original (low byte) inode back
-		andb #0b00011111		; mask off the inode position in block
+		andb #0b00011111	; mask off the inode position in block
 		lbsr mul32		; d now has byte offset start of inode
 		leay d,y
 		ldb #0x20		; copy 20 bytes
@@ -150,51 +150,52 @@ datawordswaps:	lbsr wordswap
 
 		rts
 
-; reads all (upto 7 blocks) the data for the current inode into x
+; reads all (upto 7 direct + 32 indirect blocks) the data for the current
+; inode into x
 
-fsreaddata:	ldb #7
-		ldu #inode+14
+fsreaddata:	ldb #7			; 7 direct blocks
+		ldu #inode+14		; direct pointers start 14 bytes in
 
-moredatablks:	ldy ,u++
-		beq fsreaddataout
-		lbsr fsreadblk
-		decb
-		bne moredatablks
+moredatablks:	ldy ,u++		; get the first block number
+		beq fsreaddataout	; zero? end of array
+		lbsr fsreadblk		; read the block into x
+		decb			; next block
+		bne moredatablks	; read upto 7 blocks
 
-; indirect block
+; following the direct blocks we have indirect blocks
 
-		pshs x
-		ldx #scratchblk
-		ldy ,u++
-		beq fsreaddataout
-		lbsr fsreadblk
+		pshs x			; save how far we have got so far
+		ldx #scratchblk		; this is a block of pointers
+		ldy ,u++		; get the first (and only) indirect
+		beq fsreaddataout	; if not set, skip indirect stuff
+		lbsr fsreadblk		; read the block of direct pointers
 
-		ldb #0x20		; read upto another 32kbyte
-		ldx #scratchblk
-swapindir:	lbsr wordswap
-		leax 1,x
-		decb
-		bne swapindir
+		ldb #0x20		; we will swap the first 32 pointers
+		ldx #scratchblk		; we don't care about the rest
+swapindir:	lbsr wordswap		; swap a pointer
+		leax 1,x		; next pointer
+		decb			; and one less to swap
+		bne swapindir		; go back and swap
 
-		ldu #scratchblk
-		ldb #0x20
-		puls x
-moreindirblks:	ldy ,u++
-		beq fsreaddataout
-		lbsr fsreadblk
-		decb
-		bne moreindirblks
+		ldu #scratchblk		; now we need to load each block
+		ldb #0x20		; upto only 32 additional blocks
+		puls x			; pop the stashed file block pointer
+moreindirblks:	ldy ,u++		; y is the block of real file data
+		beq fsreaddataout	; it might be not set
+		lbsr fsreadblk		; if it is, read it all in to x
+		decb			; see....
+		bne moreindirblks	; if there are more indirect blocks
 
 fsreaddataout:	rts
 
 ; reads the file at inode y into x, using the inode and data read functions
 
-fsreadfile:	pshs x,y
-		ldx #inode
-		lbsr fsreadinode
+fsreadfile:	pshs x			; save our param for where to write
+		ldx #inode		; set up the inode pointer
+		lbsr fsreadinode	; read inode y
 
-		puls x,y
-		lbsr fsreaddata
+		puls x			; get the parm back
+		lbsr fsreaddata		; read the data
 
 		rts		
 
