@@ -5,11 +5,8 @@
 		.org 0
 
 		lds #USERSTACKEND
-		bra go
 
-message:	.asciz 'Hello from CompactFlash!!\r\n'
-
-go:		lda #10
+		lda #10
 		leax message,pcr
 again:		pshs a,x
 		jsr jserialputstr
@@ -19,3 +16,5 @@ again:		pshs a,x
 		deca
 		bne again
 		swi
+
+message:	.asciz 'Hello from CompactFlash!!\r\n'
