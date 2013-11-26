@@ -8,7 +8,7 @@ all: $(BINS)
 %.ihx: %.rel
 	aslink -nmwi $<
 	
-%.rel: %.asm
+%.rel: %.asm user.inc
 	as6809 -oxs $<
 
 clean:
