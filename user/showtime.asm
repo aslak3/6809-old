@@ -12,11 +12,7 @@ showtime:	lds #USERSTACKEND
 		leax timeoutput,pcr	; read into this buffer
 		ldy #8			; we need 8 bytes
 
-showtimenext:	jsr jspiread		; get a byte into b
-		stb, x+			; store it
-
-		leay -1,y		; dec the count of bytes to read
-		bne showtimenext	; get the next one
+		jsr jspireadblock	; get y bytes into x
 
 		jsr jspistop		; mark with stop
 

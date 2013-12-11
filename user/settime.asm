@@ -56,18 +56,9 @@ clear:		clr ,x+
 		jsr jspistart		; mark with start
 
 		leax spibuffer,pcr
-		lda #0x11
-		sta bytecounter,pcr
+		ldy #0x11
 
-settimenext:	ldb ,x+
-
-		jsr jspiwrite		; write address 0
-
-		lda bytecounter,pcr
-		deca
-		sta bytecounter,pcr
-
-		bne settimenext
+		jsr jspiwriteblock	; write address 0
 
 		jsr jspistop		; mark with stop
 
@@ -75,7 +66,6 @@ settimenext:	ldb ,x+
 
 ; variables
 
-bytecounter:	.rmb 1
 spibuffer:	.rmb 0x11
 
 ; messages
