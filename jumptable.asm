@@ -32,3 +32,7 @@ jserialgetbyte::	jmp serialgetbyte
 ;; 15/11/2013 extensions
 jay8910playnote::	jmp ay8910playnote
 jay8910playtune::	jmp ay8910playtune
+
+;; 11/12/2013
+jspiwriteblock::	jmp spiwriteblock
+jspireadblock::		jmp spireadblock
