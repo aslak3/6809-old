@@ -87,7 +87,7 @@ commandarray:	.word dumpmemory
 		.word 0x0000
 		.byte NULL
 
-bootbeeps:	.byte 8, 1, 0xff
+bootbeeps:	.asciz 'abcdefg'
 
 ; END OF DATA
 
@@ -103,7 +103,7 @@ zeroram:	clr ,x+
 ; setup the serial port
 
 		lbsr serialinit		; setup the serial port
-		lbsr viainit		; prepare the via
+		lbsr spiinit		; prepare the via
 		clr LATCH		; blank the latch
 
 		ldx #resetmsg		; show prompt for flash
@@ -129,8 +129,8 @@ romcopy:	lda ,x+			; read in
 normalstart:	ldx #greetingmsg	; greetings!
 		lbsr serialputstr	; output the greeting
 
-		ldx #bootbeeps
-		lbsr ay8910playtune	; play booting beeps
+;		ldx #bootbeeps
+;		lbsr ay8910playtune	; play booting beeps
 
 		clra			; reset uptime
 		clrb			; both bytes
@@ -840,7 +840,7 @@ verflash:	lda ,y+			; get the byte
 ; include the various subsystem implementations
 
 		.include 'storage.asm'
-		.include 'viaetc.asm'
+		.include 'spi.asm'
 		.include 'serial.asm'
 		.include 'strings.asm'
 		.include 'misc.asm'

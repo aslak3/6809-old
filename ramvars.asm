@@ -28,3 +28,5 @@ dirinode:	.rmb 32
 inodeptr:	.rmb 2
 xmodemblkcount:	.rmb 1
 xmodemchecksum:	.rmb 1
+ayoctave:	.rmb 1
+ayduration:	.rmb 2
