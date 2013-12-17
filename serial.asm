@@ -52,6 +52,8 @@ serialgetstr2:	bsr serialgetchar	; get a char in a
 		beq serialgetstro	; if it is, then out
 		cmpa #BS		; backspace pressed?
 		beq serialbs		; handle backspace
+		cmpa #SP		; check if less then space
+		blo serialgetstr2	; if so, then ignore it
 		sta ,x+			; add it to string
 		inc inputcount		; increment the number of chars
 serialecho:	bsr serialputchar	; echo it
@@ -63,7 +65,13 @@ serialbs:	tst inputcount		; see if the char count is 0
 		dec inputcount		; reduce count by 1
 		clr ,x			; null the current char
 		leax -1,x		; move the pointer back 1
-		bra serialecho		; echo the bs and charry on
+		lda #BS			; move cursor back one
+		bsr serialputchar
+		lda #SP			; then erase and move forward
+		bsr serialputchar
+		lda #BS			; then back one again
+		bsr serialputchar
+		bra serialgetstr2	; echo the bs and charry on
 
 ; serialgetbyte
 
