@@ -19,6 +19,7 @@ SOH		.equ 0x01
 ACK		.equ 0x06
 NAK		.equ 0x15
 EOT		.equ 0x04
+SP		.equ 0x20
 
 ; 88681
 
@@ -99,6 +100,13 @@ IFR6522		.equ BASE6522+0xd
 IER6522		.equ BASE6522+0xe
 ORAX6522	.equ BASE6522+0xf
 
+; SPI bits via the VIA
+
+MOSI		.equ 0x01
+SCLK 		.equ 0x02
+SS		.equ 0x04
+MISO		.equ 0x80
+
 ; 65SPI
 
 SPIBASE		.equ 0x8040
@@ -122,10 +130,3 @@ STACKEND	.equ 0x1fff
 USERSTACKEND	.equ 0x2800
 
 PCOFFSET	.equ 10
-
-; SPI bits
-
-MOSI		.equ 0x01
-SCLK 		.equ 0x02
-SS		.equ 0x04
-MISO		.equ 0x80

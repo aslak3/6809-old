@@ -2,7 +2,7 @@
 
 spiinit:	lda #0x01		; CPOL=0 and CPHA=1, which is
 		sta SPICONTROL		; needed by the DS1305
-		lda #0x02		; div=2, which is E by 4
+		lda #0x00		; div=0, which is E by 2
 		sta SPIDIV
 		lda #0x00		; "disable" the SS outputs
 		sta SPISS
@@ -13,22 +13,19 @@ spiinit:	lda #0x01		; CPOL=0 and CPHA=1, which is
 spistart:	lda #0x01
 		sta SPISS
 		nop
-
 		rts
 
 spistop:	clra			; deassert chip select
 		sta SPISS
 		nop
-
 		rts
 
 ; spiwrite - send the byte in b
 
 spiwrite:	stb SPIDATAOUT
 		
-writeloop:	lda SPISTATUS
-		anda #0x80
-		beq writeloop
+writeloop:	tst SPISTATUS
+		bpl writeloop
 
 		rts
 
@@ -37,12 +34,10 @@ writeloop:	lda SPISTATUS
 spiwriteblock:	ldb ,x+
 		stb SPIDATAOUT
 
-writeblockloop:	lda SPISTATUS
-		anda #0x80
-		beq writeblockloop
+writeblockloop:	tst SPISTATUS
+		bpl writeblockloop
 
 		leay -1,y
-
 		bne spiwriteblock
 
 		rts
@@ -51,9 +46,8 @@ writeblockloop:	lda SPISTATUS
 
 spiread:	clr SPIDATAOUT
 
-readloop:	lda SPISTATUS
-		anda #0x80
-		beq readloop
+readloop:	tst SPISTATUS
+		bpl readloop
 
 		ldb SPIDATAIN
 
@@ -63,9 +57,8 @@ readloop:	lda SPISTATUS
 
 spireadblock:	clr SPIDATAOUT
 
-readblockloop:	lda SPISTATUS
-		anda #0x80
-		beq readblockloop
+readblockloop:	tst SPISTATUS
+		bpl readblockloop
 
 		ldb SPIDATAIN
 		stb ,x+
