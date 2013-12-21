@@ -41,11 +41,18 @@ parseinput:	ldx #inputbuffer+1	; point at the inputbuffer
 nextparseinput:	lda ,x			; check for an initiial null
 		beq parseinputout	; null? out we go
 		bsr skipspaces		; skip spaces
+		lda ,x			; get the char under the new pos
+		cmpa #0x22		; double quote
+		beq parsestring		; if so it is a string
 		lda 2,x			; get the next but one char
 		beq parsebyte		; null? it's a byte
 		cmpa #0x20		; space
 		beq parsebyte		; yes? it's a byte
-		bra parseword		; must be a word
+		lda 4,x			; get the next but 3 char
+		beq parseword		; null? it's a word
+		cmpa #0x20		; space
+		beq parseword		; yes? it's a word
+		bra parseinputout	; no match, so end
 parsebyte:	lda #1			; code 1 for bytes
 		sta ,y+			; add it into the stream
 		bsr aschextobyte	; yes? this pair must be a byte
@@ -56,6 +63,17 @@ parseword:	lda #2			; code 2 for words
 		bsr aschextoword	; if we get here it must be a word
 		std ,y++		; save the word in u
 		bra nextparseinput
+parsestring:	lda #3			; type 3 for strings
+		sta ,y+			; save the type
+		leax 1,x		; move to after the quote
+stringloop:	lda ,x+			; get the string data
+		beq parsestringout	; end of the string (bad though)
+		cmpa #0x22		; closing quote
+		beq parsestringout	; yes? end of the string
+		sta ,y+			; add it in
+		bne stringloop		; check for nulls too
+parsestringout:	clr ,y+			; finish the string
+		bra nextparseinput	; back for more elements
 parseinputout:	clr ,y+			; null ender
 		ldy #parambuffer	; reset back for the caller
 		rts
@@ -68,6 +86,7 @@ nibtoaschex:	anda #0x0f		; mask out the high nibble
 		ble nibtoaschexout	; no? number then, so we're done
 		adda #0x07		; yes? letter then, add 'A'-'9'
 nibtoaschexout:	sta ,x+			; add it to the string
+		clr ,x
 		rts		
 
 ; bytetoaschex - convert a byte in a to two characters in x, advancing it

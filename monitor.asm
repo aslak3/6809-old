@@ -84,6 +84,8 @@ commandarray:	.word dumpmemory
 		.ascii 'p'
 		.word xmodem
 		.ascii 'x'
+		.word parsetest
+		.ascii 'z'
 		.word 0x0000
 		.byte NULL
 
@@ -315,6 +317,7 @@ nextwritebyte:	lda ,y+			; get the type
 		lbne generalerror	; not a byte, so error
 		ldb ,y+			; get the byte to write
 		stb ,x+			; and load it at memory x
+
 		bra nextwritebyte	; back for more
 writememoryout:	clra			; clean exit
 		rts
@@ -415,6 +418,7 @@ helpmsg:	.ascii 'Commands:\r\n'
 		.ascii '  i IIII ; show info about inode IIII\r\n'
 		.ascii '  f MMMM IIII : read file(etc) at inode IIII into MMMM\r\n'
 		.ascii '  x MMMM : receive file over XMODEM starting at MMMM\r\n'
+		.ascii '  p MMMM or p "STRING" : play notes at MMMM or STRING\r\n'
 		.ascii '  h or ? : this help\r\n'
 		.asciz '\r\n'
 
@@ -719,11 +723,19 @@ playay:		lbsr parseinput
 
 		lda ,y+
 		cmpa #2
-		lbne generalerror
-		ldx ,y++
+		beq playaymemory
+		cmpa #3
+		beq playaydirect
+		lda #1
+		rts
 
-		lbsr ay8910playtune
+playaymemory:	ldx ,y++
+		bra playaynow
 
+playaydirect:	tfr y,x
+		bra playaynow
+
+playaynow:	lbsr ay8910playtune
 		clra
 		rts
 
@@ -775,13 +787,60 @@ blockbad:	lda #NAK		; oh no, it was bad
 xmodemout:	lda #ACK		; at end of file, ACK the whole file
 		lbsr serialputchar
 
-		
-
 		clra
 		rts
 
 xmodemerr:	lda #1
 		rts		
+
+bytefoundmsg:	.asciz "byte: "
+wordfoundmsg:	.asciz "word: "
+stringfoundmsg:	.asciz "string: "
+
+parsetest:	lbsr parseinput
+
+parsetestloop:	lda ,y+
+		cmpa #1
+		beq bytefound
+		cmpa #2
+		beq wordfound
+		cmpa #3
+		beq stringfound
+		tsta
+		bne parsetestloop
+		clra
+		rts
+
+bytefound:	ldx #bytefoundmsg
+		lbsr serialputstr
+		lda ,y+
+		ldx #outputbuffer
+		lbsr bytetoaschex
+		ldx #outputbuffer
+		lbsr serialputstr
+		ldx #newlinemsg
+		lbsr serialputstr
+		bra parsetestloop
+
+wordfound:	ldx #wordfoundmsg
+		lbsr serialputstr
+		ldd, y++
+		ldx #outputbuffer
+		lbsr wordtoaschex
+		ldx #outputbuffer
+		lbsr serialputstr
+		ldx #newlinemsg
+		lbsr serialputstr
+		bra parsetestloop
+
+stringfound:	ldx #stringfoundmsg
+		lbsr serialputstr
+		tfr y,x
+		lbsr serialputstr
+		tfr x,y
+		ldx #newlinemsg
+		lbsr serialputstr
+		bra parsetestloop		
 
 ;;; END OF HIGH LEVEL COMMANDS
 
