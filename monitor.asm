@@ -95,18 +95,29 @@ bootbeeps:	.asciz 'abcdefg'
 
 ; setup stack to the end of ram so it can go grown backwards
 
+memerror:	lda #0x0f
+memerrorloop:	coma
+		sta LATCH
+		ldy #0xffff
+memerrordelay:	leay -1,y
+		bne memerrordelay
+		bra memerrorloop
+
 reset:		lds #STACKEND+1		; setup hardware stack
 
-		ldx #RAMSTART		; clear from start of ram
-zeroram:	clr ,x+
-		cmpx #RAMEND+1		; to end
-		bne zeroram
+		lda #0xff
+		sta LATCH
+		
+		ldx #RAMSTART
+testram:	clr ,x
+		tst ,x+
+		bne memerror
+		cmpx #RAMEND+1
+		bne testram
 
-; setup the serial port
-
+init:		clr LATCH		; blank the latch
 		lbsr serialinit		; setup the serial port
-		lbsr spiinit		; prepare the via
-		clr LATCH		; blank the latch
+		lbsr spiinit		; prepare the SPI
 
 		ldx #resetmsg		; show prompt for flash
 		lbsr serialputstr
@@ -311,14 +322,27 @@ writememory:	lbsr parseinput		; parse hexes, filling out inputbuffer
 		cmpa #2			; is it a word?
 		lbne generalerror	; validation error
 		ldx ,y++		; start address
-nextwritebyte:	lda ,y+			; get the type
+nextwrite:	lda ,y+			; get the type
 		beq writememoryout	; that's the end of the byte list
 		cmpa #1			; is it a byte?
-		lbne generalerror	; not a byte, so error
-		ldb ,y+			; get the byte to write
-		stb ,x+			; and load it at memory x
+		beq writebyte		; yes, so process bytes
+		cmpa #2
+		beq writeword		; same for words
+		cmpa #3
+		beq writestring		; same for strings
+		tsta
+		beq writememoryout	; null? we are done
+		lbra generalerror	; otherwise its unknown, so bail
 
-		bra nextwritebyte	; back for more
+writebyte:	ldb ,y+			; get the byte to write
+		stb ,x+			; and load it at memory x
+		bra nextwrite		; back for more
+writeword:	ldd ,y++		; get the word to write
+		std, x++		; and load it
+		bra nextwrite		; back for more
+writestring:	lbsr concatstr		; use the concatstr operation
+		bra nextwrite		; ...it copies y->x
+	
 writememoryout:	clra			; clean exit
 		rts
 
@@ -402,7 +426,7 @@ showregisters:	ldx #outputbuffer	; set output buffer
 
 helpmsg:	.ascii 'Commands:\r\n'
 		.ascii '  r : show registers\r\n'
-		.ascii '  w AAAA B1 B2 B3 ... : write to AAAA bytes B1 B2 B3 ...\r\n'
+		.ascii '  w AAAA BB WWWW "STRING" ... : write to AAAA bytes, words, strings\r\n'
 		.ascii '  d AAAA LLLL : dump from AAAA count LLLL bytes in hex\r\n'
 		.ascii '  e EEEE : exit to user code at EEEE\r\n'
 		.ascii '  q : reset the monitor\r\n'
@@ -793,6 +817,8 @@ xmodemout:	lda #ACK		; at end of file, ACK the whole file
 xmodemerr:	lda #1
 		rts		
 
+; z BB WWWW "STRING" .... - test the parser by outputting what was parsed
+
 bytefoundmsg:	.asciz "byte: "
 wordfoundmsg:	.asciz "word: "
 stringfoundmsg:	.asciz "string: "
@@ -807,8 +833,10 @@ parsetestloop:	lda ,y+
 		cmpa #3
 		beq stringfound
 		tsta
-		bne parsetestloop
-		clra
+		beq parsetestout
+		lbra generalerror
+
+parsetestout:	clra
 		rts
 
 bytefound:	ldx #bytefoundmsg
@@ -824,7 +852,7 @@ bytefound:	ldx #bytefoundmsg
 
 wordfound:	ldx #wordfoundmsg
 		lbsr serialputstr
-		ldd, y++
+		ldd ,y++
 		ldx #outputbuffer
 		lbsr wordtoaschex
 		ldx #outputbuffer
