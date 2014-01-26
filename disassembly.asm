@@ -399,38 +399,38 @@ nomatch:	ldx #ehmsg
 
 prefixout:	stu statementend	; save the end address
 
-		lda #40
-		lbsr outputmoveto
+		lda #40			; move to the middle of the screen
+		lbsr outputmoveto	; ...
 
-		ldy statementstart
+		ldy statementstart	; reset instruction counter
 
-rawbyteloop:	lda ,y+
-		ldx outputpointer
-		lbsr bytetoaschex
-		stx outputpointer
+rawbyteloop:	lda ,y+			; get the byte from teh stream
+		ldx outputpointer	; get the current position
+		lbsr bytetoaschex	; convert byte to ascii
+		stx outputpointer	; save the new position
 
-		ldx #spacemsg
-		lbsr outputappend
+		ldx #spacemsg		; pad with a space
+		lbsr outputappend	; ..
 
-		cmpy statementend
-		bne rawbyteloop
+		cmpy statementend	; see if we are at the end
+		bne rawbyteloop		; if not, back for more raw bytes
 
-		lda #60
-		lbsr outputmoveto
+		lda #60			; move to 3/4 across the screen
+		lbsr outputmoveto	; ...
 
-		ldy statementstart
+		ldy statementstart	; reset instruction counter
 
-rawbyteascloop:	lda ,y+
-		lbsr printableasc
-		lbsr outputasc
+rawbyteascloop:	lda ,y+			; get the byte from the stream
+		lbsr printableasc	; convert it to printable ascii
+		lbsr outputasc		; add it ot the output
 		
-		cmpy statementend
-		bne rawbyteascloop
+		cmpy statementend	; see if we are the end 
+		bne rawbyteascloop	; if not, back for more ascii chars
 
 		ldx #newlinemsg		; we want a nice newline
-		lbsr outputappend
-		ldx outputpointer
-		clr ,x
+		lbsr outputappend	; between the statements
+		ldx outputpointer	; get the current pos
+		clr ,x			; so we can (finally) add a null
 
 		ldx #outputbuffer	; send the whole line
 		lbsr serialputstr	; to the terminal
@@ -603,40 +603,40 @@ indexedhandle:	ldd ,u+
 ;;;
 
 outputinit:	ldx #outputbuffer
-		lda #80				; fill width with spaces
-		ldb #0x20			; space
-outputinitloop:	stb ,x+
-		deca
-		bne outputinitloop
-		clr ,x+				; add the terminator
-		ldx #outputbuffer		; reset the buffer pointer
-		stx outputpointer
+		lda #80			; fill term width with spaces
+		ldb #0x20		; 'space'
+outputinitloop:	stb ,x+			; fill with a space
+		deca			; upto 80 chars
+		bne outputinitloop	; back for more
+		clr ,x+			; add the terminator
+		ldx #outputbuffer	; reset the buffer pointer
+		stx outputpointer	; and save it to the start
 		rts
 
 outputappend:	pshs x,y,a
-		tfr x,y
-		ldx outputpointer
-		lbsr concatstr
-		stx outputpointer
+		tfr x,y			; on input x is the string to append
+		ldx outputpointer	; but we need it in y
+		lbsr concatstr		; append y->x
+		stx outputpointer	; save the new position
 		puls x,y,a
 		rts
 
 outputasc:	pshs x
-		ldx outputpointer
-		sta ,x+
-		stx outputpointer
+		ldx outputpointer	; get the current position
+		sta ,x+			; put 'a' in the stream
+		stx outputpointer	; save the new position
 		puls x
 		rts
 
 outputbackone:	pshs x,a
-		ldx outputpointer
-		lda #0x20
-		sta ,-x				; blank the last char
-		stx outputpointer
+		ldx outputpointer	; get the current position
+		lda #0x20		; 'space'
+		sta ,-x			; blank current pos and back move one
+		stx outputpointer	; save the new position
 		puls x,a
 		rts
 
-outputmoveto:	ldx #outputbuffer
-		leax a,x
-		stx outputpointer
+outputmoveto:	ldx #outputbuffer	; get the starting position
+		leax a,x		; add the column offset
+		stx outputpointer	; save it to the current position
 		rts
