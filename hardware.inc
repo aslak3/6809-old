@@ -38,7 +38,8 @@ OPRRESET88681	.equ BASE88681+0xf
 
 ; latch
 
-LATCH		.equ 0x8010
+;LATCH		.equ 0x8010
+LATCH		.equ 0x8040
 
 ; IDE
 

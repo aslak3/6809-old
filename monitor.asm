@@ -64,6 +64,8 @@ commandarray:	.word dumpmemory
 		.ascii 'u'
 		.word latchout
 		.ascii 'c'
+		.word latchin
+		.ascii 'C'
 		.word spistore
 		.ascii '+'
 		.word ideidentify
@@ -84,6 +86,8 @@ commandarray:	.word dumpmemory
 		.ascii 'p'
 		.word xmodem
 		.ascii 'x'
+		.word disassemble
+		.ascii 's'
 		.word parsetest
 		.ascii 'z'
 		.word 0x0000
@@ -484,6 +488,18 @@ latchout:	lbsr parseinput		; parse the input
 		clra
 		rts
 
+latchin:	lda LATCH
+		ldx #outputbuffer
+		lbsr bytetoaschex
+		clr ,x+
+		ldx #outputbuffer
+		lbsr serialputstr
+		ldx #newlinemsg
+		lbsr serialputstr
+
+		clra
+		rts
+
 ; spi store - "+ FFFF WWW RRR..." - writes and reads to the spi bus
 
 spistore:	lbsr parseinput		; parse hexes, filling out inputbuffer
@@ -817,6 +833,21 @@ xmodemout:	lda #ACK		; at end of file, ACK the whole file
 xmodemerr:	lda #1
 		rts		
 
+disassemble:	lbsr parseinput		; parse hexes, filling out inputbuffer
+		lda ,y+			; get the type
+		cmpa #2			; is it a word?
+		lbne generalerror	; validation error
+		ldu ,y++		; start address
+		lda ,y+			; get the type
+		cmpa #2			; is it a word?
+		lbne generalerror	; yes, mark it as bad
+		ldd ,y++		; length/count of bytes
+		std disasscounter	; store it in the variable
+
+		lbsr disassentry
+
+		rts
+
 ; z BB WWWW "STRING" .... - test the parser by outputting what was parsed
 
 bytefoundmsg:	.asciz "byte: "
@@ -932,3 +963,5 @@ verflash:	lda ,y+			; get the byte
 		.include 'strings.asm'
 		.include 'misc.asm'
 		.include 'ay8910.asm'
+		.include 'disassembly.asm'
+
