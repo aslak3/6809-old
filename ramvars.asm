@@ -19,6 +19,8 @@ disasscounter:	.rmb 2
 outputpointer:	.rmb 2
 addrmode:	.rmb 2
 opcode:		.rmb 1
+currentpage:	.rmb 2
+
 statementstart:	.rmb 2
 statementend:	.rmb 2
 

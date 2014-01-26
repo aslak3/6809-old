@@ -137,12 +137,11 @@ tstbn:		.asciz 'TSTB'
 
 ;;; Machine code instruction tables
 
-; first struct is one with a first nibble prefix filter
+; first struct is a page definition (default or page 10, 11 etc)
 
-.macro		prefix opcodeprefix, opcodetab, addrmodehandler
-		.byte opcodeprefix	; low nibble in opcode
-		.word opcodetab		; opcode table
-		.word addrmodehandler	; post opcode bytes handler
+.macro		pagedef opcode, page
+		.byte opcode
+		.word page
 .endm
 
 ; second struct has no prefix and is just a list of any opcodes
@@ -152,12 +151,43 @@ tstbn:		.asciz 'TSTB'
 		.word addrmodehandler	; post opcode bytes handler
 .endm
 
-; this is an actual list of opcodes
+; third struct is one with a first nibble prefix filter
+
+.macro		prefix opcodeprefix, opcodetab, addrmodehandler
+		.byte opcodeprefix	; low nibble in opcode
+		.word opcodetab		; opcode table
+		.word addrmodehandler	; post opcode bytes handler
+.endm
+
+; this is an actual opcodes: binary value to opcode string
 
 .macro		mc opcode, mn
 		.byte opcode		; opcode byte value (maybe masked)
 		.word mn		; opcode asciz string
 .endm
+
+; all the pages, mapping the first opcode byte to a page
+
+pagedefs:	pagedef 0x10, page10
+		pagedef 0x11, page11
+		pagedef 0x00, 0x00
+
+; "pages" are collections of noprefix'ed and prefix'ed tables
+
+defaultpage:	.word noprefixtab, prefixtab
+page10:		.word p10noprefixtab, p10prefixtab
+page11:		.word p11noprefixtab, p11prefixtab
+
+; these are the "randoms" which have no prefix block
+
+noprefixtab:	noprefix inherenttab, nullhandle
+		noprefix indexedtab, indexedhandle
+		noprefix immedtab, immedhandle
+		noprefix regimmedtab, regimmedhandle
+		noprefix stkimmedtab, stkimmedhandle
+		noprefix relbytetab, relbytehandle
+		noprefix relwordtab, relwordhandle
+		noprefix 0xffff, 0x0000
 
 ; we sort these by addressing mode. opcode "blocks" make up the bulk of the
 ; number space, luckily
@@ -178,17 +208,6 @@ prefixtab:	prefix 0xb0, regaopstab, extendedhandle
 		prefix 0xe0, regbopstab, indexedhandle
 
 		prefix 0xff, 0x0000, 0x0000
-
-; these are the "randoms" which have no prefix block
-
-noprefixtab:	noprefix inherenttab, nullhandle
-		noprefix indexedtab, indexedhandle
-		noprefix immedtab, immedhandle
-		noprefix regimmedtab, regimmedhandle
-		noprefix stkimmedtab, stkimmedhandle
-		noprefix relbytetab, relbytehandle
-		noprefix relwordtab, relwordhandle
-		noprefix 0xffff, 0x0000
 
 ; inherent opcode table - opcodes with no parameter - not masked
 
@@ -246,7 +265,7 @@ regimmedtab:	mc 0x1e, exgn
 		mc 0x1f, tfrn
 		mc 0xff, 0x0000
 
-; special immediate (1 byte) opcodes sed in stacking - no mask
+; special immediate (1 byte) opcodes used in stacking - no mask
 
 stkimmedtab:	mc 0x34, pshsn
 		mc 0x35, pulsn
@@ -275,9 +294,13 @@ relbytetab:	mc 0x20, bran
 		mc 0x8d, bsrn
 		mc 0xff, 0x0000
 
+; same again, but two bytes - still no mask
+
 relwordtab:	mc 0x16, lbran
 		mc 0x17, lbsrn
 		mc 0xff, 0x0000
+
+; suffix (multiple prefixes) block of memery operations
 
 memopstab:	mc 0x00, negn
 		mc 0x03, comn
@@ -293,6 +316,8 @@ memopstab:	mc 0x00, negn
 		mc 0x0f, clrn
 		mc 0xff, 0x0000
 
+; stuff that operates on the a register is common between 3 addr mode
+
 regaopstab:	mc 0x00, suban
 		mc 0x01, cmpan
 		mc 0x02, sbcan
@@ -306,10 +331,12 @@ regaopstab:	mc 0x00, suban
 		mc 0x0a, oran
 		mc 0x0b, addan
 		mc 0x0c, cmpxn
-		mc 0x0d, jsrn
+		mc 0x0d, jsrn		; 0x8d is bsr with no prefix
 		mc 0x0e, ldxn
 		mc 0x0f, stxn
 		mc 0xff, 0x0000
+
+; stuff that operates on the b register is common too
 
 regbopstab:	mc 0x00, subbn
 		mc 0x01, cmpbn
@@ -329,7 +356,45 @@ regbopstab:	mc 0x00, subbn
 		mc 0x0f, stun
 		mc 0xff, 0x0000
 
-; disassemble from u bytes
+; page 10 noprefixe and prefixe tables
+
+p10noprefixtab:	noprefix p10relwordtab, relwordhandle
+		noprefix p10inherenttab, nullhandle
+		noprefix 0xffff, 0x0000
+
+p10prefixtab:	prefix 0xff, 0x0000, 0x0000
+
+; page 10 word relative opcoes
+
+p10relwordtab:	mc 0x21, lbrnn
+		mc 0x22, lbhin
+		mc 0x23, lblsn
+		mc 0x24, lbhsn
+		mc 0x25, lblon
+		mc 0x26, lbnen
+		mc 0x27, lbeqn
+		mc 0x28, lbvcn
+		mc 0x29, lbvsn
+		mc 0x2a, lbpln
+		mc 0x2b, lbmin
+		mc 0x2c, lbgen
+		mc 0x2d, lbltn
+		mc 0x2e, lbgtn
+		mc 0x2f, lblen
+		mc 0xff, 0x0000
+
+; page 10 inherent opcodes
+
+p10inherenttab:	mc 0x3f, swi2n
+		mc 0xff, 0x0000
+
+; page 11 noprefix and prefix tables
+
+p11noprefixtab:	noprefix 0xffff, 0x0000
+
+p11prefixtab:	prefix 0xff, 0x0000, 0x0000
+
+; handy strings
 
 spacemsg:	.asciz ' '
 ehmsg:		.asciz '???'
@@ -338,6 +403,8 @@ commamsg:	.asciz ','
 hexmsg:		.asciz '$'
 directhexmsg:	.asciz '<$'
 immedhexmsg:	.asciz '#$'
+
+; register names
 
 ccregmsg:	.asciz 'CC'
 aregmsg:	.asciz 'A'
@@ -350,6 +417,8 @@ sregmsg:	.asciz 'S'
 uregmsg:	.asciz 'U'
 pcregmsg:	.asciz 'PC'
 
+; disassemble from u
+
 disassentry:	lbsr outputinit		; setup the buffer and pointer
 
 		stu statementstart	; save the address of the first byte
@@ -361,12 +430,28 @@ disassentry:	lbsr outputinit		; setup the buffer and pointer
 		ldx #spacemsg		; and a space would be nice
 		lbsr outputappend	; add it
 		lbsr outputappend	; and one more
-		
+
+		ldy #defaultpage	; set the default page
+		sty currentpage		; and save it away
+
 		lda ,u+			; get the opcode byte
 		sta opcode		; save it (we'll need it later)
 
-		ldy #noprefixtab	; set up the non prefix table
-		lda opcode		; get the full opcode back
+		ldy #pagedefs		; we need to loop on the page defs
+pagedefloop:	tst ,y			; end of the list?
+		beq setcurrentpage	; if so then exit loop
+		cmpa ,y+		; see if we have a match to the page
+		bne nopagedefmatch	; if not...
+		ldy ,y			; if we do, then deref to get page
+		sty currentpage		; save it (pointer to nopreixtab)
+		lda ,u+			; get the new opcode
+		sta opcode		; and save it
+		bra setcurrentpage	; hop forward to setting current page
+nopagedefmatch:	leay 2,y		; hop over the noprefix pointer
+		bra pagedefloop		; back for more (there's only 2...)
+
+setcurrentpage:	ldy [currentpage]	; get the non prefix table
+		lda opcode		; get the opcode again
 		
 noprefixloop:	ldx ,y			; get the opcode pointer
 		cmpx #0xffff		; 0xffff marks this one's end
@@ -376,7 +461,9 @@ noprefixloop:	ldx ,y			; get the opcode pointer
 		leay 4,y		; y points to the noprefix table
 		bra noprefixloop	; not the opcode table
 
-noprefixout:	ldy #prefixtab		; set up our table of prefixes
+noprefixout:	ldy currentpage		; get the current page again
+		leay 2,y		; the preifxtab is next
+		ldy ,y			; deref to get it
 		lda opcode		; get the full opcode again
 		anda #0xf0		; we just want the prefix
 
