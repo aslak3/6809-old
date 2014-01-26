@@ -382,7 +382,7 @@ noprefixout:	ldy #prefixtab		; set up our table of prefixes
 
 prefixloop:	ldb ,y			; get this prefix
 		cmpb #0xff		; 0xff marks the end of the table
-		beq prefixout		; if we are at the end, leave
+		beq nomatch		; if we are at the end ??? to output
 		cmpa ,y+		; and see if it matches the prefix
 		bne prefixnotfound	; not found, so onward to next one
 
