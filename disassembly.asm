@@ -362,7 +362,15 @@ p10noprefixtab:	noprefix p10relwordtab, relwordhandle
 		noprefix p10inherenttab, nullhandle
 		noprefix 0xffff, 0x0000
 
-p10prefixtab:	prefix 0xff, 0x0000, 0x0000
+p10prefixtab:	prefix 0x80, p10regatab, immedhandle
+		prefix 0x90, p10regatab, directhandle
+		prefix 0xa0, p10regatab, indexedhandle
+		prefix 0xb0, p10regatab, extendedhandle
+		prefix 0xc0, p10regbtab, immedhandle
+		prefix 0xd0, p10regbtab, directhandle
+		prefix 0xe0, p10regbtab, indexedhandle
+		prefix 0xf0, p10regbtab, extendedhandle
+		prefix 0xff, 0x0000, 0x0000
 
 ; page 10 word relative opcoes
 
@@ -388,11 +396,33 @@ p10relwordtab:	mc 0x21, lbrnn
 p10inherenttab:	mc 0x3f, swi2n
 		mc 0xff, 0x0000
 
+p10regatab:	mc 0x03, cmpdn
+		mc 0x0c, cmpyn
+		mc 0x0e, ldyn
+		mc 0x0f, styn
+		mc 0xff, 0x0000
+
+p10regbtab:	mc 0x0e, ldsn
+		mc 0x0f, stsn
+		mc 0xff, 0x0000
+
 ; page 11 noprefix and prefix tables
 
-p11noprefixtab:	noprefix 0xffff, 0x0000
+p11noprefixtab:	noprefix p11inherenttab, nullhandle
+		noprefix 0xffff, 0x000
 
-p11prefixtab:	prefix 0xff, 0x0000, 0x0000
+p11prefixtab:	prefix 0x80, p11regtab, immedhandle
+		prefix 0x90, p11regtab, directhandle
+		prefix 0xa0, p11regtab, indexedhandle
+		prefix 0xb0, p11regtab, extendedhandle
+		prefix 0xff, 0x0000, 0x0000
+
+p11inherenttab:	mc 0x3f, swi3n
+		mc 0xff, 0x0000
+
+p11regtab:	mc 0x03, cmpun
+		mc 0x0c, cmpsn
+		mc 0xff, 0x0000
 
 ; handy strings
 
