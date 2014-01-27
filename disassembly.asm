@@ -841,6 +841,7 @@ indexwordreg:	ldd ,u++
 indexdreg:	ldx #dregmsg
 		lbsr outputappend
 		ldx #commamsg
+		lbsr outputappend
 		ldx outputappend
 		lbsr showindexreg
 		rts
