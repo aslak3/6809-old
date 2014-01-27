@@ -712,9 +712,163 @@ stackingit:	ldx ,y			; deref to get the reg string
 		lbsr outputappend	; so add that
 		bra endstacking		; back to common path
 
-; TODO
+; index
 
-indexedhandle:	ldd ,u+
+sindirectmsg:	.asciz '['
+eindirectmsg:	.asciz ']'
+incmsg:		.asciz '+'
+incincmsg:	.asciz '++'
+decmsg:		.asciz '-'
+decdecmsg:	.asciz '--'
+
+offsettab:	.word indexreginc, indexregincinc, indexregdec, indexregdecdec
+		.word indexreg, indexbreg, indexareg, indexinvalid
+		.word indexbytereg, indexwordreg, indexinvalid, indexdreg
+		.word indexbytepc, indexwordpc, indexinvalid, indexindirect
+
+indexedhandle:	lda ,u+
+		sta indexcode
+		bmi indexoffset
+		anda #0x1f
+		ldx outputpointer
+		lbsr bytetoaschex
+		stx outputpointer
+		ldx #commamsg
+		lbsr outputappend
+		bsr showindexreg
+		rts
+indexoffset:	lda indexcode
+		bita #0x10
+		beq notindirect
+		ldx #sindirectmsg
+		lbsr outputappend
+notindirect:	anda #0x0f
+		lsla
+		ldx #offsettab
+		ldx a,x
+		jsr ,x
+		lda indexcode
+		bita #0x10
+		beq indexout
+		ldx #eindirectmsg
+		lbsr outputappend
+indexout:	rts
+
+indexregtab:	.word xregmsg, yregmsg, uregmsg, sregmsg
+
+showindexreg:	lda indexcode
+		anda #0x7f
+		lsra
+		lsra
+		lsra
+		lsra
+		lsra
+		lsla
+		ldx #indexregtab
+		ldx a,x
+		lbsr outputappend
+		rts
+
+indexinvalid:	ldx #ehmsg
+		lbsr outputappend
+		rts
+
+indexreginc:	ldx #commamsg
+		lbsr outputappend
+		bsr showindexreg
+		ldx #incmsg
+		lbsr outputappend
+		rts
+
+indexregincinc:	ldx #commamsg
+		lbsr outputappend
+		bsr showindexreg
+		ldx #incincmsg
+		lbsr outputappend
+		rts
+
+indexregdec:	ldx #commamsg
+		lbsr outputappend
+		ldx #decmsg
+		lbsr outputappend
+		lbsr showindexreg
+		rts
+
+indexregdecdec:	ldx #commamsg
+		lbsr outputappend
+		ldx #decdecmsg
+		lbsr outputappend
+		lbsr showindexreg
+		rts
+
+indexreg:	ldx #commamsg
+		lbsr outputappend
+		lbsr showindexreg
+		rts
+
+indexbreg:	ldx #bregmsg
+		lbsr outputappend
+		ldx #commamsg
+		lbsr outputappend
+		lbsr showindexreg
+		rts
+
+indexareg:	ldx #aregmsg
+		lbsr outputappend
+		ldx #commamsg
+		lbsr outputappend
+		lbsr showindexreg
+		rts
+
+indexbytereg:	lda ,u+
+		ldx outputpointer
+		lbsr bytetoaschex
+		stx outputpointer
+		ldx #commamsg
+		lbsr outputappend
+		lbsr showindexreg
+		rts
+
+indexwordreg:	ldd ,u++
+		ldx outputpointer
+		lbsr wordtoaschex
+		stx outputpointer
+		ldx #commamsg
+		lbsr outputappend
+		lbsr showindexreg
+		rts
+
+indexdreg:	ldx #dregmsg
+		lbsr outputappend
+		ldx #commamsg
+		ldx outputappend
+		lbsr showindexreg
+		rts
+
+indexbytepc:	lda ,u+
+		ldx outputpointer
+		lbsr bytetoaschex
+		stx outputpointer
+		ldx #commamsg
+		lbsr outputappend
+		ldx #pcregmsg
+		lbsr outputappend
+		rts
+
+indexwordpc:	ldd ,u++
+		ldx outputpointer
+		lbsr wordtoaschex
+		stx outputpointer
+		ldx #commamsg
+		lbsr outputappend
+		ldx #pcregmsg
+		lbsr outputappend
+		rts
+
+indexindirect:	ldd ,u++
+		ldx outputpointer
+		lbsr wordtoaschex
+		stx outputpointer
 		rts
 
 ;;;

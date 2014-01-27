@@ -20,7 +20,7 @@ outputpointer:	.rmb 2
 addrmode:	.rmb 2
 opcode:		.rmb 1
 currentpage:	.rmb 2
-
+indexcode:	.rmb 1
 statementstart:	.rmb 2
 statementend:	.rmb 2
 
