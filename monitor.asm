@@ -841,10 +841,9 @@ disassemble:	lbsr parseinput		; parse hexes, filling out inputbuffer
 		lda ,y+			; get the type
 		cmpa #2			; is it a word?
 		lbne generalerror	; yes, mark it as bad
-		ldd ,y++		; length/count of bytes
-		std disasscounter	; store it in the variable
+		ldx ,y++		; length/count of bytes
 
-		lbsr disassentry
+		lbsr disassentry	; do the disassembly
 
 		rts
 

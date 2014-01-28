@@ -447,9 +447,11 @@ sregmsg:	.asciz 'S'
 uregmsg:	.asciz 'U'
 pcregmsg:	.asciz 'PC'
 
-; disassemble from u
+; disassemble from u, count of x instructions
 
-disassentry:	lbsr outputinit		; setup the buffer and pointer
+disassentry:	stx disasscounter	; save the instruction count
+		
+		lbsr outputinit		; setup the buffer and pointer
 
 		stu statementstart	; save the address of the first byte
 		tfr u,d			; get address of this line
@@ -511,8 +513,8 @@ prefixloop:	ldb ,y			; get this prefix
 prefixnotfound:	leay 4,y		; hop over to the next prefix
 		bra prefixloop		; and go back for more
 
-nomatch:	ldx #ehmsg
-		lbsr outputappend
+nomatch:	ldx #ehmsg		; '???'
+		lbsr outputappend	; oh dear
 
 prefixout:	stu statementend	; save the end address
 
@@ -696,7 +698,7 @@ stackingit:	ldx ,y			; deref to get the reg string
 		lbsr outputappend	; so add that
 		bra endstacking		; back to common path
 
-; index
+; indexed mode decoder - the most complex handler by far
 
 sindirectmsg:	.asciz '['
 eindirectmsg:	.asciz ']'
@@ -705,143 +707,151 @@ incincmsg:	.asciz '++'
 decmsg:		.asciz '-'
 decdecmsg:	.asciz '--'
 
+; the different indexing mode, 16 of them but a few are unused
+
 offsettab:	.word indexreginc, indexregincinc, indexregdec, indexregdecdec
 		.word indexreg, indexbreg, indexareg, indexinvalid
 		.word indexbytereg, indexwordreg, indexinvalid, indexdreg
 		.word indexbytepc, indexwordpc, indexinvalid, indexindirect
 
-indexedhandle:	lda ,u+
-		sta indexcode
-		bmi indexoffset
-		anda #0x1f
-		lbsr outputbyte
-		ldx #commamsg
-		lbsr outputappend
-		bsr showindexreg
-		rts
-indexoffset:	lda indexcode
-		bita #0x10
-		beq notindirect
-		ldx #sindirectmsg
-		lbsr outputappend
-notindirect:	anda #0x0f
-		lsla
-		ldx #offsettab
-		ldx a,x
-		jsr ,x
-		lda indexcode
-		bita #0x10
-		beq indexout
-		ldx #eindirectmsg
-		lbsr outputappend
+; the front end to the handler
+
+indexedhandle:	lda ,u+			; grab the index code byte
+		sta indexcode		; save it away
+		bmi indexoffset		; bit7 set?
+		anda #0x1f		; if not->offset is in this byte
+		lbsr outputbyte		; output just the low 5 bits
+		ldx #commamsg		; then a comma
+		lbsr outputappend	; ...
+		bsr showindexreg	; and the register we are offsetting
+		rts			; done
+indexoffset:	bita #0x10		; bit4 set->
+		beq notindirect		; means indirect mode is used
+		ldx #sindirectmsg	; this is a '['
+		lbsr outputappend	; add it to the output
+notindirect:	anda #0x0f		; mask iff the low 4 bits
+		lsla			; shift up to get index into tab
+		ldx #offsettab		; setup the offset mode table
+		ldx a,x			; add the offset type
+		jsr ,x			; jump into the handler
+		lda indexcode		; restore the index code again
+		bita #0x10		; and test test for indirect
+		beq indexout		; if not, then done
+		ldx #eindirectmsg	; otherwise get the ']'
+		lbsr outputappend	; and add it to the stream
 indexout:	rts
+
+; these are the four index registers
 
 indexregtab:	.word xregmsg, yregmsg, uregmsg, sregmsg
 
-showindexreg:	lda indexcode
-		anda #0x7f
-		lsra
-		lsra
-		lsra
-		lsra
-		lsra
-		lsla
-		ldx #indexregtab
-		ldx a,x
-		lbsr outputappend
+; turns the index code byte into a register and outputs it
+
+showindexreg:	lda indexcode		; load the index code back
+		anda #0x7f		; mask off the high bit
+		lsra			; shift down to the end
+		lsra			; ...
+		lsra			; ...
+		lsra			; ,,,
+		lsra			; ,,,
+		lsla			; shift up, since tab is words
+		ldx #indexregtab	; setup the tablee
+		ldx a,x			; add the reg type and deref
+		lbsr outputappend	; add the reg to the stream
 		rts
 
-indexinvalid:	ldx #ehmsg
-		lbsr outputappend
+; handlers for the difference indexing modes
+
+indexinvalid:	ldx #ehmsg		; '???'
+		lbsr outputappend	; output it
 		rts
 
-indexreginc:	ldx #commamsg
-		lbsr outputappend
-		bsr showindexreg
-		ldx #incmsg
-		lbsr outputappend
+indexreginc:	ldx #commamsg		; ','
+		lbsr outputappend	; output it
+		bsr showindexreg	; then the register
+		ldx #incmsg		; '+'
+		lbsr outputappend	; output it
 		rts
 
-indexregincinc:	ldx #commamsg
-		lbsr outputappend
-		bsr showindexreg
-		ldx #incincmsg
-		lbsr outputappend
+indexregincinc:	ldx #commamsg		; ','
+		lbsr outputappend	; output it
+		bsr showindexreg	; then the register
+		ldx #incincmsg		; '++'
+		lbsr outputappend	; output it
 		rts
 
-indexregdec:	ldx #commamsg
-		lbsr outputappend
-		ldx #decmsg
-		lbsr outputappend
-		lbsr showindexreg
+indexregdec:	ldx #commamsg		; ','
+		lbsr outputappend	; output it
+		ldx #decmsg		; '-'
+		lbsr outputappend	; output it
+		lbsr showindexreg	; then the register
 		rts
 
-indexregdecdec:	ldx #commamsg
-		lbsr outputappend
-		ldx #decdecmsg
-		lbsr outputappend
-		lbsr showindexreg
+indexregdecdec:	ldx #commamsg		; ','
+		lbsr outputappend	; output it
+		ldx #decdecmsg		; '--'
+		lbsr outputappend	; output it
+		lbsr showindexreg	; then the register
 		rts
 
-indexreg:	ldx #commamsg
-		lbsr outputappend
-		lbsr showindexreg
+indexreg:	ldx #commamsg		; ','
+		lbsr outputappend	; output it
+		lbsr showindexreg	; then the register
 		rts
 
-indexbreg:	ldx #bregmsg
-		lbsr outputappend
-		ldx #commamsg
-		lbsr outputappend
-		lbsr showindexreg
+indexbreg:	ldx #bregmsg		; 'B'
+		lbsr outputappend	; output it
+		ldx #commamsg		; ','
+		lbsr outputappend	; output it
+		lbsr showindexreg	; then the register
 		rts
 
-indexareg:	ldx #aregmsg
-		lbsr outputappend
-		ldx #commamsg
-		lbsr outputappend
-		lbsr showindexreg
+indexareg:	ldx #aregmsg		; 'A'
+		lbsr outputappend	; output it
+		ldx #commamsg		; ','
+		lbsr outputappend	; output it
+		lbsr showindexreg	; then the register
 		rts
 
-indexbytereg:	lda ,u+
-		lbsr outputbyte
-		ldx #commamsg
-		lbsr outputappend
-		lbsr showindexreg
+indexbytereg:	lda ,u+			; get the next byte
+		lbsr outputbyte		; output the byte (with dollar)
+		ldx #commamsg		; ','
+		lbsr outputappend	; output it
+		lbsr showindexreg	; then the register
 		rts
 
-indexwordreg:	ldd ,u++
-		lbsr outputword
-		ldx #commamsg
-		lbsr outputappend
-		lbsr showindexreg
+indexwordreg:	ldd ,u++		; get the next two bytes
+		lbsr outputword		; output the word
+		ldx #commamsg		; ','
+		lbsr outputappend	; output it
+		lbsr showindexreg	; then the register
 		rts
 
-indexdreg:	ldx #dregmsg
-		lbsr outputappend
-		ldx #commamsg
-		lbsr outputappend
-		ldx outputappend
-		lbsr showindexreg
+indexdreg:	ldx #dregmsg		; 'D'
+		lbsr outputappend	; output it
+		ldx #commamsg		; ','
+		lbsr outputappend	; output it 
+		lbsr showindexreg	; then the register
 		rts
 
-indexbytepc:	lda ,u+
-		lbsr outputbyte
-		ldx #commamsg
-		lbsr outputappend
-		ldx #pcregmsg
-		lbsr outputappend
+indexbytepc:	lda ,u+			; get the next byte
+		lbsr outputbyte		; output the byte with dollar
+		ldx #commamsg		; ','
+		lbsr outputappend	; output it
+		ldx #pcregmsg		; 'PC'
+		lbsr outputappend	; output it
 		rts
 
-indexwordpc:	ldd ,u++
-		lbsr outputword
-		ldx #commamsg
-		lbsr outputappend
-		ldx #pcregmsg
-		lbsr outputappend
+indexwordpc:	ldd ,u++		; get the next word
+		lbsr outputword		; output the word with dollar
+		ldx #commamsg		; ','
+		lbsr outputappend	; output it
+		ldx #pcregmsg		; 'PC'
+		lbsr outputappend	; output it
 		rts
 
-indexindirect:	ldd ,u++
-		lbsr outputword
+indexindirect:	ldd ,u++		; get the next work
+		lbsr outputword		; and output it
 		rts
 
 ;;;
@@ -873,20 +883,20 @@ outputasc:	pshs x
 		rts
 
 outputbyte:	pshs x
-		ldx #hexmsg
-		lbsr outputappend
-		ldx outputpointer
-		lbsr bytetoaschex
-		stx outputpointer
+		ldx #hexmsg		; '$'
+		lbsr outputappend	; output it
+		ldx outputpointer	; get the current pointer
+		lbsr bytetoaschex	; add the byte to the output
+		stx outputpointer	; save the new pointer
 		puls x
 		rts
 
 outputword:	pshs x
-		ldx #hexmsg
-		lbsr outputappend
-		ldx outputpointer
-		lbsr wordtoaschex
-		stx outputpointer
+		ldx #hexmsg		; '$'
+		lbsr outputappend	; output it
+		ldx outputpointer	; get the current pointer
+		lbsr wordtoaschex	; add the word to the output
+		stx outputpointer	; save the new pointer
 		puls x
 		rts
 
