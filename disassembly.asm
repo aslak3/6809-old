@@ -433,6 +433,7 @@ commamsg:	.asciz ','
 hexmsg:		.asciz '$'
 directmsg:	.asciz '<'
 immedmsg:	.asciz '#'
+negativemsg:	.asciz '-'
 
 ; register names
 
@@ -720,7 +721,7 @@ indexedhandle:	lda ,u+			; grab the index code byte
 		sta indexcode		; save it away
 		bmi indexoffset		; bit7 set?
 		anda #0x1f		; if not->offset is in this byte
-		lbsr outputbyte		; output just the low 5 bits
+		lbsr outputsignfive	; output just the low 5 bits
 		ldx #commamsg		; then a comma
 		lbsr outputappend	; ...
 		bsr showindexreg	; and the register we are offsetting
@@ -814,14 +815,14 @@ indexareg:	ldx #aregmsg		; 'A'
 		rts
 
 indexbytereg:	lda ,u+			; get the next byte
-		lbsr outputbyte		; output the byte (with dollar)
+		lbsr outputsignbyte	; output the byte (with dollar)
 		ldx #commamsg		; ','
 		lbsr outputappend	; output it
 		lbsr showindexreg	; then the register
 		rts
 
 indexwordreg:	ldd ,u++		; get the next two bytes
-		lbsr outputword		; output the word
+		lbsr outputsignword	; output the word
 		ldx #commamsg		; ','
 		lbsr outputappend	; output it
 		lbsr showindexreg	; then the register
@@ -835,7 +836,7 @@ indexdreg:	ldx #dregmsg		; 'D'
 		rts
 
 indexbytepc:	lda ,u+			; get the next byte
-		lbsr outputbyte		; output the byte with dollar
+		lbsr outputsignbyte	; output the byte with dollar
 		ldx #commamsg		; ','
 		lbsr outputappend	; output it
 		ldx #pcregmsg		; 'PC'
@@ -843,7 +844,7 @@ indexbytepc:	lda ,u+			; get the next byte
 		rts
 
 indexwordpc:	ldd ,u++		; get the next word
-		lbsr outputword		; output the word with dollar
+		lbsr outputsignword	; output the word with dollar
 		ldx #commamsg		; ','
 		lbsr outputappend	; output it
 		ldx #pcregmsg		; 'PC'
@@ -888,6 +889,52 @@ outputbyte:	pshs x
 		ldx outputpointer	; get the current pointer
 		lbsr bytetoaschex	; add the byte to the output
 		stx outputpointer	; save the new pointer
+		puls x
+		rts
+
+outputsignbyte:	pshs x
+		ldx #hexmsg
+		lbsr outputappend
+		tsta
+		bpl plusbyte
+		ldx #negativemsg
+		lbsr outputappend
+		coma
+		inca
+plusbyte:	ldx outputpointer
+		lbsr bytetoaschex
+		stx outputpointer
+		puls x
+		rts
+
+outputsignfive:	pshs x
+		ldx #hexmsg
+		lbsr outputappend
+		bita #0x10
+		beq plusfive
+		ldx #negativemsg
+		lbsr outputappend
+		eora #0x1f
+		inca
+plusfive:	ldx outputpointer
+		lbsr bytetoaschex
+		stx outputpointer
+		puls x
+		rts
+
+outputsignword:	pshs x
+		ldx #hexmsg
+		lbsr outputappend
+		tsta
+		bpl plusword
+		ldx #negativemsg
+		lbsr outputappend
+		coma
+		comb
+		addd #1
+plusword:	ldx outputpointer
+		lbsr wordtoaschex
+		stx outputpointer
 		puls x
 		rts
 
