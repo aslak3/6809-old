@@ -883,6 +883,21 @@ outputasc:	pshs x
 		puls x
 		rts
 
+outputsignfive:	pshs x
+		ldx #hexmsg
+		lbsr outputappend
+		bita #0x10
+		beq plusfive
+		ldx #negativemsg
+		lbsr outputappend
+		eora #0x1f
+		inca
+plusfive:	ldx outputpointer
+		lbsr bytetoaschex
+		stx outputpointer
+		puls x
+		rts
+
 outputbyte:	pshs x
 		ldx #hexmsg		; '$'
 		lbsr outputappend	; output it
@@ -907,18 +922,13 @@ plusbyte:	ldx outputpointer
 		puls x
 		rts
 
-outputsignfive:	pshs x
-		ldx #hexmsg
-		lbsr outputappend
-		bita #0x10
-		beq plusfive
-		ldx #negativemsg
-		lbsr outputappend
-		eora #0x1f
-		inca
-plusfive:	ldx outputpointer
-		lbsr bytetoaschex
-		stx outputpointer
+
+outputword:	pshs x
+		ldx #hexmsg		; '$'
+		lbsr outputappend	; output it
+		ldx outputpointer	; get the current pointer
+		lbsr wordtoaschex	; add the word to the output
+		stx outputpointer	; save the new pointer
 		puls x
 		rts
 
@@ -935,15 +945,6 @@ outputsignword:	pshs x
 plusword:	ldx outputpointer
 		lbsr wordtoaschex
 		stx outputpointer
-		puls x
-		rts
-
-outputword:	pshs x
-		ldx #hexmsg		; '$'
-		lbsr outputappend	; output it
-		ldx outputpointer	; get the current pointer
-		lbsr wordtoaschex	; add the word to the output
-		stx outputpointer	; save the new pointer
 		puls x
 		rts
 
