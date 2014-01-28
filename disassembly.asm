@@ -431,8 +431,8 @@ ehmsg:		.asciz '???'
 colonmsg:	.asciz ':'
 commamsg:	.asciz ','
 hexmsg:		.asciz '$'
-directhexmsg:	.asciz '<$'
-immedhexmsg:	.asciz '#$'
+directmsg:	.asciz '<'
+immedmsg:	.asciz '#'
 
 ; register names
 
@@ -595,49 +595,34 @@ nullhandle:	rts			; dummy for immediates
 
 ; post opode byte handler for single byte offsets
 
-relbytehandle:	ldx #hexmsg		; $ etc
-		lbsr outputappend	; append that
-		lda ,u+			; get the byte offset
+relbytehandle:	lda ,u+			; get the byte offset
 		leax a,u
 		tfr x,d
-		ldx outputpointer	; grab the curent postion
-		lbsr wordtoaschex	; print the offset into the buffer
-		stx outputpointer	; and save the new one
+		lbsr outputword		; print the offset into the buffer
 		rts
 
 ; post opode byte handler for word offsets
 
-relwordhandle:	ldx #hexmsg		; $ etc
-		lbsr outputappend	; append that
-		ldd ,u++		; get the byte offset
+relwordhandle:	ldd ,u++		; get the byte offset
 		leax d,u
 		tfr x,d
-		ldx outputpointer	; grab the curent postion
-		lbsr wordtoaschex	; print the offset into the buffer
-		stx outputpointer	; and save the new one
+		lbsr outputword		; print the offset into the buffer
 		rts
 
 ; post opcode bytes handler for word address
 
-extendedhandle:	ldx #hexmsg		; #$ etc
-		lbsr outputappend	; append that
-		ldd ,u++		; get the word, advancing u
-		ldx outputpointer	; grab the current position
-		lbsr wordtoaschex	; print the address into the buffer
-		stx outputpointer	; and save the new one
+extendedhandle:	ldd ,u++		; get the word, advancing u
+		lbsr outputword
 		rts
 
-directhandle:	ldx #directhexmsg	; <$ etc
-		lbsr outputappend	; append that
+directhandle:	ldx #directmsg		; '<'
+		lbsr outputappend
 		lda ,u+			; get the byte address, advancing u
-		ldx outputpointer	; grab the current position
-		lbsr bytetoaschex	; print the address into the buffer
-		stx outputpointer	; and save the new one
+		lbsr outputbyte
 		rts
 
-immedhandle:	ldx #immedhexmsg	; #$ etc
+immedhandle:	ldx #immedmsg		; '#'
 		lbsr outputappend	; append that
-		ldx outputpointer	; grab the current position
 		lda opcode		; get the original opcode
 		anda #0x0f		; mask off the low byte
 		cmpa #0x03		; this is subd, 2 bytes
@@ -647,12 +632,11 @@ immedhandle:	ldx #immedhexmsg	; #$ etc
 		cmpa #0x0e		; ldx is also 2 bytes
 		beq immedword		; ...
 		lda ,u+			; otherwise it must be 1 byte
-		lbsr bytetoaschex	; convert it
-immedout:	stx outputpointer	; update the pointer
-		rts			; done
+		lbsr outputbyte		; convert it
+immedout:	rts			; done
 immedword:	ldd ,u++		; for words, grab it to d
-		lbsr wordtoaschex	; convert it
-		bra immedout		; and back out the common path
+		lbsr outputword		; convert it
+		rts
 
 ; this is for exg and tfr - ehmsg is ??? - the index is the post byte,
 ; masked for source and destination
@@ -730,9 +714,7 @@ indexedhandle:	lda ,u+
 		sta indexcode
 		bmi indexoffset
 		anda #0x1f
-		ldx outputpointer
-		lbsr bytetoaschex
-		stx outputpointer
+		lbsr outputbyte
 		ldx #commamsg
 		lbsr outputappend
 		bsr showindexreg
@@ -821,18 +803,14 @@ indexareg:	ldx #aregmsg
 		rts
 
 indexbytereg:	lda ,u+
-		ldx outputpointer
-		lbsr bytetoaschex
-		stx outputpointer
+		lbsr outputbyte
 		ldx #commamsg
 		lbsr outputappend
 		lbsr showindexreg
 		rts
 
 indexwordreg:	ldd ,u++
-		ldx outputpointer
-		lbsr wordtoaschex
-		stx outputpointer
+		lbsr outputword
 		ldx #commamsg
 		lbsr outputappend
 		lbsr showindexreg
@@ -847,9 +825,7 @@ indexdreg:	ldx #dregmsg
 		rts
 
 indexbytepc:	lda ,u+
-		ldx outputpointer
-		lbsr bytetoaschex
-		stx outputpointer
+		lbsr outputbyte
 		ldx #commamsg
 		lbsr outputappend
 		ldx #pcregmsg
@@ -857,9 +833,7 @@ indexbytepc:	lda ,u+
 		rts
 
 indexwordpc:	ldd ,u++
-		ldx outputpointer
-		lbsr wordtoaschex
-		stx outputpointer
+		lbsr outputword
 		ldx #commamsg
 		lbsr outputappend
 		ldx #pcregmsg
@@ -867,9 +841,7 @@ indexwordpc:	ldd ,u++
 		rts
 
 indexindirect:	ldd ,u++
-		ldx outputpointer
-		lbsr wordtoaschex
-		stx outputpointer
+		lbsr outputword
 		rts
 
 ;;;
@@ -897,6 +869,24 @@ outputasc:	pshs x
 		ldx outputpointer	; get the current position
 		sta ,x+			; put 'a' in the stream
 		stx outputpointer	; save the new position
+		puls x
+		rts
+
+outputbyte:	pshs x
+		ldx #hexmsg
+		lbsr outputappend
+		ldx outputpointer
+		lbsr bytetoaschex
+		stx outputpointer
+		puls x
+		rts
+
+outputword:	pshs x
+		ldx #hexmsg
+		lbsr outputappend
+		ldx outputpointer
+		lbsr wordtoaschex
+		stx outputpointer
 		puls x
 		rts
 

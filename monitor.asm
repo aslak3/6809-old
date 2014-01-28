@@ -180,7 +180,7 @@ swinterrupt:	ldx #outputbuffer	; setup the "break" message
 		ldy #breakatmsg		; ...
 		lbsr concatstr		; append it
 		leay ,s			; get the new stack pointr
-		sty spatentry
+		sty spatentry		; save the new stack pointer
 		ldd 10,y		; the pc is 10 bytes in
 		lbsr wordtoaschex	; convert it to ascii
 		ldy #newlinemsg		; adding a newline
