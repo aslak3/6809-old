@@ -685,7 +685,11 @@ stkimmedhandle: ldb #8			; 8 shifts for a byte
 sstacking:	ldy #sstackingtab	; it is pshu or pulu
 stackingstart:	lda ,u			; advance at the end not now
 stackingloop:	rora			; rorate into carry
-		bcs stackingit		; if 1, then we are stacking
+		bcc endstacking		; if 0, then we are not stacking
+		ldx ,y			; deref to get the reg string
+		lbsr outputappend	; append the reg name
+		ldx #commamsg		; and we need a comma
+		lbsr outputappend	; so add that
 endstacking:	leay 2,y		; eitherway move index along
 		decb			; and decrement bit counter
 		bne stackingloop	; see if there is more bits
@@ -693,11 +697,6 @@ endstacking:	leay 2,y		; eitherway move index along
 		beq stkimmedout		; if there was nothing to stack
 		lbsr outputbackone	; don't move the cursor back one
 stkimmedout:	rts			; out
-stackingit:	ldx ,y			; deref to get the reg string
-		lbsr outputappend	; append the reg name
-		ldx #commamsg		; and we need a comma
-		lbsr outputappend	; so add that
-		bra endstacking		; back to common path
 
 ; indexed mode decoder - the most complex handler by far
 
