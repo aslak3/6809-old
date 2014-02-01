@@ -875,15 +875,12 @@ outputappend:	pshs x,y,a
 		puls x,y,a
 		rts
 
-outputasc:	pshs x
-		ldx outputpointer	; get the current position
+outputasc:	ldx outputpointer	; get the current position
 		sta ,x+			; put 'a' in the stream
 		stx outputpointer	; save the new position
-		puls x
 		rts
 
-outputsignfive:	pshs x
-		ldx #hexmsg
+outputsignfive:	ldx #hexmsg
 		lbsr outputappend
 		bita #0x10
 		beq plusfive
@@ -894,20 +891,16 @@ outputsignfive:	pshs x
 plusfive:	ldx outputpointer
 		lbsr bytetoaschex
 		stx outputpointer
-		puls x
 		rts
 
-outputbyte:	pshs x
-		ldx #hexmsg		; '$'
+outputbyte:	ldx #hexmsg		; '$'
 		lbsr outputappend	; output it
 		ldx outputpointer	; get the current pointer
 		lbsr bytetoaschex	; add the byte to the output
 		stx outputpointer	; save the new pointer
-		puls x
 		rts
 
-outputsignbyte:	pshs x
-		ldx #hexmsg
+outputsignbyte:	ldx #hexmsg
 		lbsr outputappend
 		tsta
 		bpl plusbyte
@@ -918,21 +911,17 @@ outputsignbyte:	pshs x
 plusbyte:	ldx outputpointer
 		lbsr bytetoaschex
 		stx outputpointer
-		puls x
 		rts
 
 
-outputword:	pshs x
-		ldx #hexmsg		; '$'
+outputword:	ldx #hexmsg		; '$'
 		lbsr outputappend	; output it
 		ldx outputpointer	; get the current pointer
 		lbsr wordtoaschex	; add the word to the output
 		stx outputpointer	; save the new pointer
-		puls x
 		rts
 
-outputsignword:	pshs x
-		ldx #hexmsg
+outputsignword:	ldx #hexmsg
 		lbsr outputappend
 		tsta
 		bpl plusword
@@ -944,7 +933,6 @@ outputsignword:	pshs x
 plusword:	ldx outputpointer
 		lbsr wordtoaschex
 		stx outputpointer
-		puls x
 		rts
 
 outputbackone:	pshs x,a
