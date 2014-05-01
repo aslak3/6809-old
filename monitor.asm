@@ -33,7 +33,7 @@
 
 ; START OF GLOBAL READ-ONLY DATA
 
-greetingmsg:	.asciz '\r\n6809 Monitor v0.0.0.0.6.\r\n\r\n'
+greetingmsg:	.asciz '\r\n6809 Monitor v0.1\r\n\r\n'
 youtypedmsg:	.asciz 'You typed: '
 promptmsg:	.asciz 'Monitor: > '
 nosuchmsg:	.asciz 'No such command\r\n'
@@ -73,7 +73,7 @@ commandarray:	.word dumpmemory
 		.word idereadsector
 		.ascii '<'
 		.word readblk
-		.ascii 'b'
+		.ascii '{'
 		.word fsmount
 		.ascii 'm'
 		.word readinode
@@ -90,6 +90,10 @@ commandarray:	.word dumpmemory
 		.ascii 's'
 		.word parsetest
 		.ascii 'z'
+		.word setbank
+		.ascii 'b'
+		.word getbank
+		.ascii 'B'
 		.word 0x0000
 		.byte NULL
 
@@ -121,7 +125,7 @@ testram:	clr ,x
 
 init:		clr LATCH		; blank the latch
 		lbsr serialinit		; setup the serial port
-		lbsr spiinit		; prepare the SPI
+;		lbsr spiinit		; prepare the SPI
 
 		ldx #resetmsg		; show prompt for flash
 		lbsr serialputstr
@@ -440,13 +444,15 @@ helpmsg:	.ascii 'Commands:\r\n'
 		.ascii '  c OO : output OO on the latch\r\n'
 		.ascii '  m : set 8bit ide and read mbr\r\n'
 		.ascii '  y : send ide identify command and show basic info\r\n'
-		.ascii '  b MMMM NNNN : read 1k disk block NNNN into MMMM\r\n'
+		.ascii '  { MMMM NNNN : read 1k disk block NNNN into MMMM\r\n'
 		.ascii '  < L0 L1 NN MMMM : read NN sectors from L0 L1 into MMMM\r\n'
 		.ascii '  l IIII : list directory at inode IIII\r\n'
 		.ascii '  i IIII ; show info about inode IIII\r\n'
 		.ascii '  f MMMM IIII : read file(etc) at inode IIII into MMMM\r\n'
 		.ascii '  x MMMM : receive file over XMODEM starting at MMMM\r\n'
 		.ascii '  p MMMM or p "STRING" : play notes at MMMM or STRING\r\n'
+		.ascii '  b BB : set the memory bank to BB\r\n'
+		.ascii '  B : show the current memory bank\r\n'
 		.ascii '  h or ? : this help\r\n'
 		.asciz '\r\n'
 
@@ -899,6 +905,32 @@ stringfound:	ldx #stringfoundmsg
 		ldx #newlinemsg
 		lbsr serialputstr
 		bra parsetestloop		
+
+; b BB - set memory bank
+
+setbank:	lbsr parseinput
+		lda ,y+
+		cmpa #1			; is it a word?
+		lbne generalerror	; validation error
+
+		lda ,y+
+		sta BANKLATCH
+
+		clra
+		rts
+
+; B - show the membory bank
+
+getbank:	lda BANKLATCH
+		ldx #outputbuffer
+		lbsr bytetoaschex
+		clr ,x+
+		ldx #outputbuffer
+		lbsr serialputstr
+		ldx #newlinemsg
+		lbsr serialputstr
+		clra
+		rts
 
 ;;; END OF HIGH LEVEL COMMANDS
 
