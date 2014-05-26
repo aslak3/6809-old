@@ -1,12 +1,13 @@
 ;;; SERIAL PORT ;;;
 
-; serial port setup
+; serial port setup - this needs more comments
 
 serialinit:	lda #0b00010011
 		sta MRA88681
+		sta MRB88681
 		lda #0b00000111
 		sta MRA88681
-		lda #0b00000000		; high bit rates
+		sta MRB88681
 		lda #0b00000101		; enable tx and rx
 		sta CRA88681
 		lda #0b10000000		; extend on rx
@@ -15,6 +16,9 @@ serialinit:	lda #0b00010011
 		sta CRA88681
 		lda #0b10001000		; 115.2
 		sta CSRA88681
+		lda #0xff
+		sta OPCR88681
+		sta OPRSET88681		; set port to 0, which means high :/
 
 		rts
 

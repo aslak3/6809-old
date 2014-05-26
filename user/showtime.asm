@@ -4,6 +4,7 @@
 
 showtime:	lds #USERSTACKEND
 
+		lda #0xff
 		jsr jspistart		; mark with start
 
 		clrb

@@ -4,17 +4,23 @@
 
 		.area ROM (ABS)
 
+; fast interrupt vector
+
+		.org 0xfff6
+
+		.word firqinterrupt
+
 ; software interrupt vector
 
 		.org 0xfffa
 
-		.word swinterrupt
+		.word moninterrupt
 
 ; non maskable interupt vector
 
 		.org 0xfffc
 
-		.word nmiinterrupt
+		.word moninterrupt
 
 ; setup the reset vector, last location in rom
 
@@ -33,7 +39,7 @@
 
 ; START OF GLOBAL READ-ONLY DATA
 
-greetingmsg:	.asciz '\r\n6809 Monitor v0.1\r\n\r\n'
+greetingmsg:	.asciz '\r\n6809 Monitor v0.2\r\n\r\n'
 youtypedmsg:	.asciz 'You typed: '
 promptmsg:	.asciz 'Monitor: > '
 nosuchmsg:	.asciz 'No such command\r\n'
@@ -103,29 +109,37 @@ bootbeeps:	.asciz 'abcdefg'
 
 ; setup stack to the end of ram so it can go grown backwards
 
-memerror:	lda #0x0f
-memerrorloop:	coma
-		sta LATCH
-		ldy #0xffff
-memerrordelay:	leay -1,y
-		bne memerrordelay
-		bra memerrorloop
+memerror:	lda #0x80
+		sta SOUNDER		; change tone
+memerrorloop:	bra memerrorloop		
 
-reset:		lds #STACKEND+1		; setup hardware stack
+reset:		lda #0x10
+		sta SOUNDER
 
-		lda #0xff
-		sta LATCH
-		
-		ldx #RAMSTART
-testram:	clr ,x
+		lda #0x04
+
+nextbank:	sta BANKLATCH
+		ldx #HIRAMSTART
+
+nextbyte:	clr ,x
 		tst ,x+
 		bne memerror
-		cmpx #RAMEND+1
-		bne testram
 
-init:		clr LATCH		; blank the latch
-		lbsr serialinit		; setup the serial port
-;		lbsr spiinit		; prepare the SPI
+		cmpx #HIRAMEND+1
+		bne nextbyte
+
+		deca
+		bne nextbank
+
+		lda #0x01
+		sta BANKLATCH
+
+		lds #STACKEND+1		; setup hardware stack
+
+		clr SOUNDER
+
+init:		lbsr serialinit		; setup the serial port
+		lbsr spiinit		; prepare the SPI
 
 		ldx #resetmsg		; show prompt for flash
 		lbsr serialputstr
@@ -147,7 +161,8 @@ romcopy:	lda ,x+			; read in
 		leax ROMCOPYSTART,x	; offset it forward where it now is 
 		jmp ,x			; jump to the new location of flasher
 
-normalstart:	ldx #greetingmsg	; greetings!
+normalstart:	
+		ldx #greetingmsg	; greetings!
 		lbsr serialputstr	; output the greeting
 
 ;		ldx #bootbeeps
@@ -158,6 +173,20 @@ normalstart:	ldx #greetingmsg	; greetings!
 		std uptimeh		; and store high word
 		std uptimel		; and low word
 
+		lda #0x20
+		sta SOUNDER
+		ldy #0xd000
+		lbsr delay
+
+		lda #0x10
+		sta SOUNDER
+		ldy #0x7000
+		lbsr delay
+		
+		clr SOUNDER
+
+		andcc #0xbf
+
 		swi			; enter the monitor (mainloop)
 
 ; we should never get here - it means rti was done without fixing up
@@ -167,20 +196,23 @@ normalstart:	ldx #greetingmsg	; greetings!
 		lbsr serialputstr	; print the message
 badexitloop:	bra badexitloop		; loop on the spot
 
-; nmi uptime counter - increment 32 bit counter
+; irq uptime counter - increment 32 bit counter
 
-nmiinterrupt:	ldx uptimel		; get current lowword uptime
+firqinterrupt:	pshs a,x
+		lda T1CL6522
+		ldx uptimel		; get current lowword uptime
 		leax 1,x		; add 1
 		stx uptimel		; store it back
-		bne nmiinterrupto	; if not 0 then done
+		bne firqinterrupto	; if not 0 then done
 		ldx uptimeh		; otherwise low current highword
 		leax 1,x		; add 1
 		stx uptimeh		; store it back
-nmiinterrupto:	rti
+firqinterrupto:	puls a,x
+		rti
 
 ; monitor entry point
 
-swinterrupt:	ldx #outputbuffer	; setup the "break" message
+moninterrupt:	ldx #outputbuffer	; setup the "break" message
 		ldy #breakatmsg		; ...
 		lbsr concatstr		; append it
 		leay ,s			; get the new stack pointr
@@ -200,21 +232,8 @@ mainloop:	ldx #promptmsg		; ">" etc
 		ldx #inputbuffer	; now we need a command
 		lbsr serialgetstr	; get the command (waiting as needed)
 
-		ldx #outputbuffer
-
-		ldy #newlinemsg		; tidy up the console with a newline
-		lbsr concatstr		; ...
-
-		ldy #youtypedmsg	; tell the user ...
-		lbsr concatstr		; ...
-		ldy #inputbuffer	; ...
-		lbsr concatstr		; ...
-		ldy #newlinemsg		; ...
-		lbsr concatstr		; ...
-		clr ,x+			; (add a null)
-
-		ldx #outputbuffer
-		lbsr serialputstr	; ... what they typed
+		ldx #newlinemsg
+		lbsr serialputstr	; tidy up the output with a newline
 
 		lda inputbuffer		; get the first char
 		ldx #commandarray	; setup the command pointer
@@ -489,12 +508,12 @@ latchout:	lbsr parseinput		; parse the input
 		lbne generalerror	; if not then validation error
 
 		lda ,y+			; get the byte itself
-		sta LATCH		; output the byte on the latch leds
+;		sta LATCH		; output the byte on the latch leds
 
 		clra
 		rts
 
-latchin:	lda LATCH
+latchin:	;lda LATCH
 		ldx #outputbuffer
 		lbsr bytetoaschex
 		clr ,x+
@@ -995,4 +1014,6 @@ verflash:	lda ,y+			; get the byte
 		.include 'misc.asm'
 		.include 'ay8910.asm'
 		.include 'disassembly.asm'
+		.include 'font.asm'
+		.include 'ym99.asm'
 
