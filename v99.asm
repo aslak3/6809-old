@@ -1,22 +1,30 @@
 ; ym9938 (and 58)
 
-.macro		loadconstreg register value
-		lda #value
-		sta YMDIRECTPORT
-		lda #register|0x80
-		sta YMDIRECTPORT
-.endm
+; stores whats in a in the constant register, register
 
 .macro		loadareg register
-		sta YMDIRECTPORT
+		sta VDIRECTPORT
 		lda #register|0x80
-		sta YMDIRECTPORT
+		sta VDIRECTPORT
 .endm
 
-.macro		getastatusreg register
-		loadareg YMSTATUSREG
-		lda YMSTATUSPORT
+; stores the value in the register
+
+.macro		loadconstreg register value
+		lda #value
+		sta VDIRECTPORT
+		lda #register|0x80
+		sta VDIRECTPORT
 .endm
+
+; gets the value of the status register
+
+.macro		getastatusreg register
+		loadareg VSTATUSREG
+		lda VSTATUSPORT
+.endm
+
+; trival colour palette for text mode
 
 twocolpalette:	.byte 0x00, 0x00, 0x04	; blue tinged background
 		.byte 0x07, 0x07, 0x07	; white text
@@ -25,9 +33,9 @@ twocolpalette:	.byte 0x00, 0x00, 0x04	; blue tinged background
 ; pointed by x and counted by y are copied in
 
 ymindirect:	ora #0x80		; auto incmreneting mode
-		loadareg YMINDIRECTREG	; set up the indirect reg
+		loadareg VINDIRECTREG	; set up the indirect reg
 ymindirectnext:	lda ,x+			; get the value
-		sta YMINDIRECTPORT	; save it in the register
+		sta VINDIRECTPORT	; save it in the register
 		leay -1,y		; dec the counter
 		bne ymindirectnext	; see if there is more
 		rts
@@ -35,7 +43,7 @@ ymindirectnext:	lda ,x+			; get the value
 ; sets the colour in a to the r g b poited to by x
 
 ymsetcolour:	pshs a			; save the current colour
-		loadareg YMPALETTEREG	; we are writing to the colour reg
+		loadareg VPALETTEREG	; we are writing to the colour reg
 		lda ,x+			; get red
 		lsla			; move it to the high nibble
 		lsla			; ..
@@ -43,8 +51,8 @@ ymsetcolour:	pshs a			; save the current colour
 		lsla			; ..
 		ldb ,x+			; next, put green in b
 		ora ,x+			; or in blue over red
-		sta YMPALETTEPORT	; output red and blue
-		stb YMPALETTEPORT	; output green
+		sta VPALETTEPORT	; output red and blue
+		stb VPALETTEPORT	; output green
 		puls a			; get the colour back
 		rts
 
@@ -60,67 +68,65 @@ ymsetcoloursn:	bsr ymsetcolour		; sets this colour
 
 ; sets up "core" registers
 
-ymsetbasic:	loadconstreg YMDISPLAYPOSREG, 0x00
-		loadconstreg YMDISPLAYOFFREG, 0x00
-		loadconstreg YMINTLINEREG, 0x00
+ymsetbasic:	loadconstreg VDISPLAYPOSREG, 0x00
+		loadconstreg VDISPLAYOFFREG, 0x00
+		loadconstreg VINTLINEREG, 0x00
 		rts
 
-ymsettext1mode:	loadconstreg YMMODE0REG, 0b00000000
-		loadconstreg YMMODE1REG, 0b01010000
-		loadconstreg YMMODE2REG, 0b00001010
-		loadconstreg YMMODE3REG, 0b10000010
+ymsettext1mode:	loadconstreg VMODE0REG, 0b00000000
+		loadconstreg VMODE1REG, 0b01010000
+		loadconstreg VMODE2REG, 0b00001010
+		loadconstreg VMODE3REG, 0b10000010
 
-		loadconstreg YMPATTBASEREG 0x10 ; top half of vram - video
-		loadconstreg YMVIDBASEREG 0x00 ; bottom half of vram - fonts
+		loadconstreg VPATTBASEREG 0x10	; top half of vram - video
+		loadconstreg VVIDBASEREG 0x00	; bottom half of vram - fonts
 
 		rts
 
-ymsettwocols:	ldx #twocolpalette
-		ldy #2
+ymsettwocols:	ldx #twocolpalette	; set the colour reg pointer
+		ldy #2			; 2 colours
 		lbsr ymsetcolours
 
-; white on black/blue!
-
-		loadconstreg YMCOLOUR1REG 0x10
+		loadconstreg VCOLOUR1REG 0x10
 
 		rts
 
-ymclearvram:	loadconstreg YMADDRREG, 0x00
+ymclearvram:	loadconstreg VADDRREG, 0x00
 		clra
-		sta YMADDRPORT
+		sta VADDRPORT
 		lda #0x40		; write mode
-		sta YMADDRPORT
+		sta VADDRPORT
 		ldx #0x0000
-ymclearnext:	clr YMPORT0
+ymclearnext:	clr VPORT0
 		leax 1,x
-		bne ymclearnext
+		bne ymclearnext		; 64kbytes
 		rts
 
-ymloadfonts:	loadconstreg YMADDRREG, 0x00
+ymloadfonts:	loadconstreg VADDRREG, 0x00
 		clra
-		sta YMADDRPORT
+		sta VADDRPORT
 		lda #0x41		; write to 0x100 bytes in for space
-		sta YMADDRPORT
+		sta VADDRPORT
 		ldx #fontdata
 		ldy #8*96		; 96 characters of font data
 ymloadfontsn:	lda ,x+
-		sta YMPORT0
+		sta VPORT0
 		leay -1,y
 		bne ymloadfontsn
 		rts
 
-ymshowmsg:	loadconstreg YMADDRREG, 0x20
+ymshowmsg:	loadconstreg VADDRREG, 0x20
 		clra
-		sta YMADDRPORT
+		sta VADDRPORT
 		lda #0x40		; write mode
-		sta YMADDRPORT
+		sta VADDRPORT
 ymshowmsgnext:	lda ,x+
 		beq ymshowmsgout
-		sta YMPORT0
+		sta VPORT0
 		bra ymshowmsgnext
 ymshowmsgout:	rts
 		
-testmsg:	.asciz "Testing the YM9938/58... ABCDEFGHJKLMNOPQRSTUVWXYZ"
+testmsg:	.asciz "Testing the V9938/58... ABCDEFGHJKLMNOPQRSTUVWXYZ"
 
 yminit:		lbsr ymsetbasic
 		lbsr ymclearvram

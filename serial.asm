@@ -2,10 +2,10 @@
 
 ; serial port setup - this needs more comments
 
-serialinit:	lda #0b00010011
+serialinit:	lda #0b00010011		; no parity, 8 bits/char - MR1A,B
 		sta MRA88681
 		sta MRB88681
-		lda #0b00000111
+		lda #0b00000111		; 1.000 stop bits - MR2A,B
 		sta MRA88681
 		sta MRB88681
 		lda #0b00000101		; enable tx and rx
@@ -14,17 +14,17 @@ serialinit:	lda #0b00010011
 		sta CRA88681
 		lda #0b10100000		; extend on tx
 		sta CRA88681
-		lda #0b10001000		; 115.2
+		lda #0b10001000		; 115.2K
 		sta CSRA88681
 		lda #0xff
-		sta OPCR88681
+		sta OPCR88681		; set manual control for OP0,1
 		sta OPRSET88681		; set port to 0, which means high :/
 
 		rts
 
 ; put the char in a, returning when its sent - corrupts b
 
-serialputchar:	ldb SRA88681
+serialputchar:	ldb SRA88681		; get status
 		andb #0b00000100	; transmit empty
 		beq serialputchar	; wait for port to be idle
 		sta THRA88681		; output the char
@@ -77,24 +77,27 @@ serialbs:	tst inputcount		; see if the char count is 0
 		bsr serialputchar
 		bra serialgetstr2	; echo the bs and charry on
 
-; serialgetbyte
+; serialgetbyte - get a byte in ascii hex and load it in a
 
-serialgetbyte:	ldx #inputbuffer
-		lbsr serialgetstr
-		ldx #newlinemsg
-		lbsr serialputstr
-		ldx #inputbuffer
-		lbsr aschextobyte
+serialgetbyte:	ldx #inputbuffer	; reset input buffer
+		lbsr serialgetstr	; get a line
+		ldx #newlinemsg		; echo a newline...
+		lbsr serialputstr	; ...to clean up the screen
+		ldx #inputbuffer	; reset input buffer to what we got
+		lbsr aschextobyte	; turn it into a byte in a
 		rts
 
-serialputlab:	lbsr serialputstr
-		ldd ,y
-		ldx #outputbuffer
-		lbsr wordtoaschex
-		ldy #newlinemsg
-		lbsr concatstr
-		clr ,x+
-		ldx #outputbuffer
-		lbsr serialputstr
+; serialputlab - outputs x, followed by y dereferenced  converted to a word,
+; and a newline. useful for doing things like - File size: 1234
+
+serialputlab:	lbsr serialputstr	; outputs whats in x (hope no newline)
+		ldd ,y			; deref y into d
+		ldx #outputbuffer	; reset output buffer
+		lbsr wordtoaschex	; convert d to a word
+		ldy #newlinemsg		; ...
+		lbsr concatstr		; add a newline
+		clr ,x+			; and a null
+		ldx #outputbuffer	; reset output buffer again
+		lbsr serialputstr	; and output [y] with a newline
 		rts
 
