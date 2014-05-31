@@ -68,6 +68,8 @@ commandarray:	.word dumpmemory
 		.ascii 'q'
 		.word showuptime
 		.ascii 'u'
+		.word resetuptime
+		.ascii 'U'
 		.word latchout
 		.ascii 'c'
 		.word latchin
@@ -100,6 +102,8 @@ commandarray:	.word dumpmemory
 		.ascii 'b'
 		.word getbank
 		.ascii 'B'
+		.word readbyte
+		.ascii 'R'
 		.word 0x0000
 		.byte NULL
 
@@ -161,8 +165,7 @@ romcopy:	lda ,x+			; read in
 		leax ROMCOPYSTART,x	; offset it forward where it now is 
 		jmp ,x			; jump to the new location of flasher
 
-normalstart:	
-		ldx #greetingmsg	; greetings!
+normalstart:	ldx #greetingmsg	; greetings!
 		lbsr serialputstr	; output the greeting
 
 ;		ldx #bootbeeps
@@ -185,7 +188,7 @@ normalstart:
 		
 		clr SOUNDER
 
-		andcc #0xbf
+		andcc #0xbf		; enable firq interrupt
 
 		swi			; enter the monitor (mainloop)
 
@@ -199,7 +202,7 @@ badexitloop:	bra badexitloop		; loop on the spot
 ; irq uptime counter - increment 32 bit counter
 
 firqinterrupt:	pshs a,x
-		lda T1CL6522
+		lda STOPCT88681		; clear interrupt
 		ldx uptimel		; get current lowword uptime
 		leax 1,x		; add 1
 		stx uptimel		; store it back
@@ -460,6 +463,7 @@ helpmsg:	.ascii 'Commands:\r\n'
 		.ascii '  + SSSS WWWW RRRR : from address SSSS write WWWW spi bytes then read\r\n'
 		.ascii '    RRRR bytes\r\n'
 		.ascii '  u : show uptime\r\n'
+		.ascii '  U : clear uptime counter\r\n'
 		.ascii '  c OO : output OO on the latch\r\n'
 		.ascii '  m : set 8bit ide and read mbr\r\n'
 		.ascii '  y : send ide identify command and show basic info\r\n'
@@ -498,6 +502,15 @@ showuptime:	ldx #outputbuffer	; setup the output buffer
 		clr ,x+			; terminate the string
 		ldx #outputbuffer	; reset the pointer
 		lbsr serialputstr	; output the string
+		rts
+
+; reset uptime back to 0
+
+resetuptime:	clra			; reset uptime
+		clrb			; both bytes
+		std uptimeh		; and store high word
+		std uptimel		; and low word
+		clra
 		rts
 
 ; latchout - "c OO" outputs a byte on the "latch"
@@ -950,6 +963,26 @@ getbank:	lda BANKLATCH
 		lbsr serialputstr
 		clra
 		rts
+
+readbyte:	lbsr parseinput
+		lda ,y+
+		cmpa #2			; is it a word?
+		lbne generalerror	; validation error
+
+		ldy ,y
+		lda ,y
+
+		ldx #outputbuffer
+		lbsr bytetoaschex
+		clr ,x+
+		ldx #outputbuffer
+		lbsr serialputstr
+		ldx #newlinemsg
+		lbsr serialputstr
+		clra
+		rts
+
+
 
 ;;; END OF HIGH LEVEL COMMANDS
 

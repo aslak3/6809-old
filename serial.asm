@@ -16,9 +16,24 @@ serialinit:	lda #0b00010011		; no parity, 8 bits/char - MR1A,B
 		sta CRA88681
 		lda #0b10001000		; 115.2K
 		sta CSRA88681
+
+		; OP0 and OP1 - turn off the led
+
 		lda #0xff
 		sta OPCR88681		; set manual control for OP0,1
 		sta OPRSET88681		; set port to 0, which means high :/
+
+		; 25 timer ticks per second		
+
+		lda #0b01110000		; tick on the 3.684Mhz crystal / 16
+		sta ACR88681
+		lda #0b00001000		; mask in the timer overflow
+		sta IMR88681
+		lda #0x11
+		sta CTU88681
+		lda #0xfd
+		sta CTL88681		; 4605 decimal - 25/sec
+		lda STARTCT88681	; update the timer overflow
 
 		rts
 
