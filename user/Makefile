@@ -1,4 +1,4 @@
-BINS = testprog.bin showtime.bin settime.bin type.bin showtemp.bin
+BINS = testprog.bin showtime.bin settime.bin type.bin showtemp.bin waittest.bin
 
 all: $(BINS)
 
