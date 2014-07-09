@@ -80,6 +80,8 @@ commandarray:	.word dumpmemory
 		.ascii 'y'
 		.word idereadsector
 		.ascii '<'
+		.word idewritesector
+		.ascii '>'
 		.word readblk
 		.ascii '{'
 		.word fsmount
@@ -104,6 +106,12 @@ commandarray:	.word dumpmemory
 		.ascii 'B'
 		.word readbyte
 		.ascii 'R'
+		.word testvramread
+		.ascii 'L'
+		.word testvramwrite
+		.ascii 'S'
+		.word yminit
+		.ascii 'Y'
 		.word 0x0000
 		.byte NULL
 
@@ -469,6 +477,7 @@ helpmsg:	.ascii 'Commands:\r\n'
 		.ascii '  y : send ide identify command and show basic info\r\n'
 		.ascii '  { MMMM NNNN : read 1k disk block NNNN into MMMM\r\n'
 		.ascii '  < L0 L1 NN MMMM : read NN sectors from L0 L1 into MMMM\r\n'
+		.ascii '  > L0 L1 NN MMMM : write NN sectors from L0 L1 from MMMM\r\n'
 		.ascii '  l IIII : list directory at inode IIII\r\n'
 		.ascii '  i IIII ; show info about inode IIII\r\n'
 		.ascii '  f MMMM IIII : read file(etc) at inode IIII into MMMM\r\n'
@@ -672,6 +681,47 @@ readsectorloop:	lbsr idellread		; read into x
 
 		lda IDECOUNT		; we can ask the disk if there are
 		bne readsectorloop	; more sectors to read?
+
+		clra
+		rts
+
+; idewritesector - > L0 L1 NN MMMM - read NN sectors from L0 L1 into MMMM
+
+idewritesector:	lbsr parseinput
+
+		lda ,y+			; get the type
+		cmpa #1			; byte?
+		lbne generalerror	; validation error
+		lda ,y+
+		sta IDELBA0		; this is the lowest byte in lba
+
+		lda ,y+			; get the type
+		cmpa #1			; byte?
+		lbne generalerror	; validation error
+		lda ,y+
+		sta IDELBA1		; this is the 2nd lowestbyte in lba
+
+		clr IDELBA2		; other two lba are zero
+		clr IDELBA3
+
+		lda ,y+			; get the type
+		cmpa #1			; byte?
+		lbne generalerror	; validation error
+		lda ,y+			; get the count	of sectors
+		sta IDECOUNT		; store it
+
+		lda ,y+			; get the type
+		cmpa #2			; word?
+		lbne generalerror	; validation error
+		ldx, y++		; finally where to read from
+
+		lda #0x30		; this is write sector
+		lbsr simpleidecomm	; send the command
+
+writesectorloop:lbsr idellwrite		; write into x
+
+		lda IDECOUNT		; we can ask the disk if there are
+		bne writesectorloop	; more sectors to read?
 
 		clra
 		rts
@@ -980,6 +1030,34 @@ readbyte:	lbsr parseinput
 		ldx #newlinemsg
 		lbsr serialputstr
 		clra
+		rts
+
+testvramread:	lbsr parseinput		; parse hexes, filling out inputbuffer
+		lda ,y+			; get the type
+		cmpa #2			; is it a word?
+		lbne generalerror	; validation error
+		ldx ,y++		; start address
+		lda ,y+			; get the type
+		cmpa #2			; is it a word?
+		lbne generalerror	; yes, mark it as bad
+		ldy ,y++		; length/count of bytes
+
+		lbsr ymtestread
+
+		rts
+
+testvramwrite:	lbsr parseinput		; parse hexes, filling out inputbuffer
+		lda ,y+			; get the type
+		cmpa #2			; is it a word?
+		lbne generalerror	; validation error
+		ldx ,y++		; start address
+		lda ,y+			; get the type
+		cmpa #2			; is it a word?
+		lbne generalerror	; yes, mark it as bad
+		ldy ,y++		; length/count of bytes
+
+		lbsr ymtestwrite
+
 		rts
 
 

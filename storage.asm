@@ -21,23 +21,26 @@ idewaitfordata:	lda IDESTATUS
 idellread:	ldy #512
 		lbsr idewaitnotbusy
 		lbsr idewaitfordata
-readbyteloop:	lda IDEDATA
-		sta ,x+
-		leay -1,y
-		bne readbyteloop
+readwordloop:	lda IDEDATA
+		ldb IDEHIGH
+		std ,x++
+		leay -2,y
+		bne readwordloop
+		rts
+
+idellwrite:	ldy #512
+		lbsr idewaitnotbusy
+writewordloop:	ldd ,x++
+		stb IDEHIGH
+		sta IDEDATA
+		leay -2,y
+		bne writewordloop
 		rts
 
 partstartmsg:	.asciz 'Partition starts at: '
 nombrmsg:	.asciz 'No MBR found, assuming single partition\r\n'
 
-idemount:	lda #0x01		; 8 bit enable
-		sta IDEFEATURES
-
-		lda #0xef		; set features
-		lbsr simpleidecomm
-		lbsr idewaitnotbusy
-
-		clr IDELBA0
+idemount:	clr IDELBA0
 		clr IDELBA1
 		clr IDELBA2
 		clr IDELBA3
