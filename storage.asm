@@ -28,6 +28,16 @@ readwordloop:	lda IDEDATA
 		bne readwordloop
 		rts
 
+idellreadr:	ldy #512
+		lbsr idewaitnotbusy
+		lbsr idewaitfordata
+readwordloopr:	ldb IDEDATA
+		lda IDEHIGH
+		std ,x++
+		leay -2,y
+		bne readwordloopr
+		rts
+
 idellwrite:	ldy #512
 		lbsr idewaitnotbusy
 writewordloop:	ldd ,x++

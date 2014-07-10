@@ -128,7 +128,8 @@ ymshowmsgout:	rts
 		
 testmsg:	.asciz "Testing the V9938/58... ABCDEFGHJKLMNOPQRSTUVWXYZ"
 
-yminit:		lbsr ymsetbasic
+yminit:		loadconstreg VBANKREG, 0x00
+		lbsr ymsetbasic
 		lbsr ymclearvram
 		lbsr ymloadfonts
 		lbsr ymsettwocols
@@ -138,3 +139,26 @@ yminit:		lbsr ymsetbasic
 		lbsr ymshowmsg
 
 		rts
+
+ymtestwrite:	loadconstreg VADDRREG, 0x00
+		clra
+		sta VADDRPORT
+		lda #0x40		; write mode
+		sta VADDRPORT
+ymtestwriten:	lda ,x+
+		sta VPORT0
+		leay -1,y
+		bne ymtestwriten	; 64kbytes
+		rts
+
+ymtestread:	loadconstreg VADDRREG, 0x00
+		clra
+		sta VADDRPORT
+		lda #0x00		; write mode
+		sta VADDRPORT
+ymtestreadn:	lda VPORT0
+		sta ,x+
+		leay -1,y
+		bne ymtestreadn		; 64kbytes
+		rts
+

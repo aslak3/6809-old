@@ -184,19 +184,19 @@ normalstart:	ldx #greetingmsg	; greetings!
 		std uptimeh		; and store high word
 		std uptimel		; and low word
 
-		lda #0x20
-		sta SOUNDER
-		ldy #0xd000
+		lda #0x20		; beep frequency
+		sta SOUNDER		; set the beeper beeping
+		ldy #0xd000		; small delay
 		lbsr delay
 
-		lda #0x10
-		sta SOUNDER
-		ldy #0x7000
+		lda #0x10		; higher pitched noise
+		sta SOUNDER		; more beeps
+		ldy #0x7000		; shorter delay
 		lbsr delay
 		
-		clr SOUNDER
+		clr SOUNDER		; silence the beeper
 
-		andcc #0xbf		; enable firq interrupt
+		andcc #0xaf		; enable interrupts
 
 		swi			; enter the monitor (mainloop)
 
@@ -223,7 +223,9 @@ firqinterrupto:	puls a,x
 
 ; monitor entry point
 
-moninterrupt:	ldx #outputbuffer	; setup the "break" message
+moninterrupt:	andcc #0xaf		; enable interrupts again
+
+		ldx #outputbuffer	; setup the "break" message
 		ldy #breakatmsg		; ...
 		lbsr concatstr		; append it
 		leay ,s			; get the new stack pointr
@@ -603,7 +605,7 @@ ideidentify:	lda #0xec		; this is the identify command
 		lbsr simpleidecomm	; send it
 
 		ldx #ideidentifysec	; setup our read sector buffer
-		lbsr idellread		; fil it out by 512 reads
+		lbsr idellreadr		; 512 reads (byte swapped)
 
 		ldx #outputbuffer
 		ldy #serialnomsg
