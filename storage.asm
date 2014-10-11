@@ -61,12 +61,12 @@ idemount:	clr IDELBA0
 		lda #0x20
 		lbsr simpleidecomm
 
-		ldx #idembrsec
+		ldx #idescratchsec
 		lbsr idellread
 
-		ldx #idembrsec+0x01fe
+		ldx #idescratchsec+0x01fe
 		lbsr wordswap
-		ldd idembrsec+0x01fe
+		ldd idescratchsec+0x01fe
 		cmpd #0xaa55
 		beq idemountmbr
 
@@ -79,9 +79,9 @@ idemount:	clr IDELBA0
 
 		rts
 
-idemountmbr:	ldx #idembrsec+0x01be+0x08
+idemountmbr:	ldx #idescratchsec+0x01be+0x08
 		lbsr wordswap
-		ldd idembrsec+0x01be+0x08
+		ldd idescratchsec+0x01be+0x08
 		std firstpartsects
 
 		ldx #partstartmsg

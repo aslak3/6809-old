@@ -2,9 +2,9 @@
 
 spiinit:	lda #0x01		; CPOL=0 and CPHA=1, which is
 		sta SPICONTROL		; needed by the DS1305
-		lda #0x00		; div=0, which is E by 2
+		lda #0x02		; div=2, which is E by 4
 		sta SPIDIV
-		lda #0xfe		; "disable" the SS outputs
+		lda #0xff		; "disable" the SS outputs
 		sta SPISS
 		rts
 
@@ -14,7 +14,7 @@ spistart:	sta SPISS
 		nop
 		rts
 
-spistop:	lda #0xfe		; deassert chip select
+spistop:	lda #0xff		; deassert chip select
 		sta SPISS
 		nop
 		rts

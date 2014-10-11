@@ -4,7 +4,7 @@
 
 showtime:	lds #USERSTACKEND
 
-		lda #0xff
+		lda #0xfe
 		jsr jspistart		; mark with start
 
 		clrb
@@ -35,7 +35,10 @@ showtime:	lds #USERSTACKEND
 		clra			; we need a null
 		sta ,x+			; add it
 		leax outputbuffer,pcr	; reset x for printing
+
+		pshs y
 		jsr jserialputstr	; print the time followed by space
+		puls y
 
 		lda 3,y			; get days (1-7)
 		deca			; make it into 0-6
@@ -43,7 +46,10 @@ showtime:	lds #USERSTACKEND
 		lsla			; bytes including a null
 		leax days,pcr		; setup pointer to day array
 		leax a,x		; add on the offset from above
+
+		pshs y
 		jsr jserialputstr	; output the day
+		puls y
 
 		leax outputbuffer,pcr	; back in the ram buffer
 		lda #0x20		; space char
@@ -61,11 +67,13 @@ showtime:	lds #USERSTACKEND
 		clra			; we need a null
 		sta ,x+			; add it
 		leax outputbuffer,pcr	; reset output buffer
+
 		jsr jserialputstr	; output the date ( DD/MM/YY)
 
 		leax newlinemsg,pcr
-		jsr jserialputstr	; and add a newline
 
+		jsr jserialputstr	; and add a newline
+		
 		swi			; back to monitor
 
 ; days array - each day is 4 bytes long

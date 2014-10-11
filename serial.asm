@@ -43,6 +43,7 @@ serialputchar:	ldb SRA88681		; get status
 		andb #0b00000100	; transmit empty
 		beq serialputchar	; wait for port to be idle
 		sta THRA88681		; output the char
+		lbsr ymputchar
 		rts
 
 ; puts the null terminated string pointed to by x

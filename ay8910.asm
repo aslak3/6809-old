@@ -1,12 +1,12 @@
 ; AY-8910
 
-start:    	.byte 0x07, 0xf8, 0x08, 0x18
+start:    	.byte 0x07, 0x38, 0x08, 0x18
 		.byte 0xff, 0xff
 
 stop:		.byte 0x07, 0xff, 0x08, 0x00
 		.byte 0xff, 0xff
 
-envelope:	.byte 0x0b, 0x00, 0x0c, 0x01	 	; envelope
+envelope:	.byte 0x0b, 0x00, 0x0c, 0x08	 	; envelope
 		.byte 0xff, 0xff
 
 shapetable:	.byte 0x00, 0x04, 0x0b, 0x0d
@@ -43,6 +43,8 @@ notetable:	.ascii 'c'
 ay8910start:	pshs x
 		ldx #start
 		bsr ay8910streamer
+		ldx #envelope
+		bsr ay8910streamer
 		puls x
 		rts
 
@@ -62,8 +64,6 @@ ay8910stout:  	rts
 
 ay8910playnote:	pshs x
 		lbsr ay8910start
-		ldx #envelope
-		bsr ay8910streamer
 		puls x
 		lda #0x0d
 		sta AYLATCHADDR
@@ -77,13 +77,14 @@ ay8910playnote:	pshs x
 		ldb #0x01
 		stb AYLATCHADDR
 		sta AYWRITEADDR
-		ldx #0x8000
+		ldx #0xffff
 		lbsr aydelay
 		rts
 
 ay8910shifter:	stx ayduration
 		tfr b,a
 		adda ayoctave
+		inca
 ay8910shloop:	deca
 		beq ay8910shout
 		lsr ayduration
@@ -152,4 +153,10 @@ playtuneout:	rts
 
 aydelay:	leax -1,x
 		bne aydelay
+		rts
+
+readjoystick:	lda #AYIOA
+		sta AYLATCHADDR
+		lda AYREADADDR
+		coma
 		rts

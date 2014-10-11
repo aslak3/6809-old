@@ -10,6 +10,12 @@
 
 		.word firqinterrupt
 
+; normal interrupt vector
+
+		.org 0xfff8
+
+		.word irqinterrupt
+
 ; software interrupt vector
 
 		.org 0xfffa
@@ -110,8 +116,14 @@ commandarray:	.word dumpmemory
 		.ascii 'L'
 		.word testvramwrite
 		.ascii 'S'
-		.word yminit
+		.word yminitterm
 		.ascii 'Y'
+		.word ymclearscreen
+		.ascii 'V'
+		.word testreg
+		.ascii 'K'
+		.word showstick
+		.ascii 'j'
 		.word 0x0000
 		.byte NULL
 
@@ -130,7 +142,8 @@ reset:		lda #0x10
 
 		lda #0x04
 
-nextbank:	sta BANKLATCH
+nextbank:	deca
+		sta BANKLATCH
 		ldx #HIRAMSTART
 
 nextbyte:	clr ,x
@@ -140,7 +153,7 @@ nextbyte:	clr ,x
 		cmpx #HIRAMEND+1
 		bne nextbyte
 
-		deca
+		tsta
 		bne nextbank
 
 		lda #0x01
@@ -150,9 +163,12 @@ nextbyte:	clr ,x
 
 		clr SOUNDER
 
-init:		lbsr serialinit		; setup the serial port
+init:		clr keyreadpointer
+		clr keywritepointer
+		lbsr serialinit		; setup the serial port
 		lbsr spiinit		; prepare the SPI
-
+		lbsr yminitterm
+	
 		ldx #resetmsg		; show prompt for flash
 		lbsr serialputstr
 
@@ -176,8 +192,8 @@ romcopy:	lda ,x+			; read in
 normalstart:	ldx #greetingmsg	; greetings!
 		lbsr serialputstr	; output the greeting
 
-;		ldx #bootbeeps
-;		lbsr ay8910playtune	; play booting beeps
+		ldx #bootbeeps
+		lbsr ay8910playtune	; play booting beeps
 
 		clra			; reset uptime
 		clrb			; both bytes
@@ -196,6 +212,10 @@ normalstart:	ldx #greetingmsg	; greetings!
 		
 		clr SOUNDER		; silence the beeper
 
+		clr IRQFILTER		; no non fast interrupts (yet)
+		lda #IRQ88C681
+		sta FIRQFILTER		; for the duart timer interrupt
+
 		andcc #0xaf		; enable interrupts
 
 		swi			; enter the monitor (mainloop)
@@ -207,19 +227,41 @@ normalstart:	ldx #greetingmsg	; greetings!
 		lbsr serialputstr	; print the message
 badexitloop:	bra badexitloop		; loop on the spot
 
-; irq uptime counter - increment 32 bit counter
+; fast irq routine - dispatch to device handlers
 
-firqinterrupt:	pshs a,x
+firqinterrupt:	pshs a
+		lda IRQSTATUS
+		bita #IRQ88C681
+		beq timerhandlergo
+		bra firqinterrupto
+firqinterrupto:	puls a
+		rti
+timerhandlergo:	lbsr timerhandler
+		bra firqinterrupto
+
+; irq service routine - dispatch to device handlers
+
+irqinterrupt:	lda IRQSTATUS
+		bita #IRQ65C22
+		beq keyhandlergo
+		bra irqinterrupto
+irqinterrupto:	rti
+keyhandlergo:	lbsr keyhandler
+		bra irqinterrupto
+
+; uptime counter - increment 32 bit counter
+
+timerhandler:	pshs a,x
 		lda STOPCT88681		; clear interrupt
 		ldx uptimel		; get current lowword uptime
 		leax 1,x		; add 1
 		stx uptimel		; store it back
-		bne firqinterrupto	; if not 0 then done
+		bne timerhandlero	; if not 0 then done
 		ldx uptimeh		; otherwise low current highword
 		leax 1,x		; add 1
 		stx uptimeh		; store it back
-firqinterrupto:	puls a,x
-		rti
+timerhandlero:	puls a,x
+		rts
 
 ; monitor entry point
 
@@ -604,13 +646,13 @@ modelnomsg:	.asciz 'Model number: '
 ideidentify:	lda #0xec		; this is the identify command
 		lbsr simpleidecomm	; send it
 
-		ldx #ideidentifysec	; setup our read sector buffer
+		ldx #idescratchsec	; setup our read sector buffer
 		lbsr idellreadr		; 512 reads (byte swapped)
 
 		ldx #outputbuffer
 		ldy #serialnomsg
 		lbsr concatstr
-		ldy #ideidentifysec+20
+		ldy #idescratchsec+20
 		lda #20
 		lbsr concatstrn
 		ldy #newlinemsg
@@ -622,7 +664,7 @@ ideidentify:	lda #0xec		; this is the identify command
 		ldx #outputbuffer
 		ldy #firmwarerevmsg
 		lbsr concatstr
-		ldy #ideidentifysec+46
+		ldy #idescratchsec+46
 		lda #8
 		lbsr concatstrn
 		ldy #newlinemsg
@@ -634,7 +676,7 @@ ideidentify:	lda #0xec		; this is the identify command
 		ldx #outputbuffer
 		ldy #modelnomsg
 		lbsr concatstr
-		ldy #ideidentifysec+54
+		ldy #idescratchsec+54
 		lda #40
 		lbsr concatstrn
 		ldy #newlinemsg
@@ -754,31 +796,31 @@ startinodemsg:	.asciz 'Start of inodes at block: '
 
 fsmount:	lbsr idemount		; do the mbr read etc
 
-		ldx #fssuperblk		; setup the super block pointer
+		ldx #scratchblk		; setup the super block pointer
 		ldy #0x0001		; it is at block 1 (2nd block)
 
 		lbsr fsreadblk		; read it in
 
-		ldx #fssuperblk		; no. inodes
+		ldx #scratchblk		; no. inodes
 		lbsr wordswap		; little->big endian
-		ldx #fssuperblk+2	; device size
+		ldx #scratchblk+2	; device size
 		lbsr wordswap		; little->big endian
-		ldx #fssuperblk+4	; count of blocks of inode bmap blocks
+		ldx #scratchblk+4	; count of blocks of inode bmap blocks
 		lbsr wordswap		; little->big endian
-		ldx #fssuperblk+6	; count of blocks of data bmap blocks
+		ldx #scratchblk+6	; count of blocks of data bmap blocks
 		lbsr wordswap		; little->big endian
-		ldx #fssuperblk+8	; where data blocks begin (unused)
+		ldx #scratchblk+8	; where data blocks begin (unused)
 		lbsr wordswap		; little->big endian
-		ldx #fssuperblk+16	; magic!
+		ldx #scratchblk+16	; magic!
 		lbsr wordswap		; little->big endian
 
 		ldd #2			; we are already at the 2nd block
-		addd fssuperblk+4	; add the inode bmap blocks
-		addd fssuperblk+6	; and the data bmap blocks
+		addd scratchblk+4	; add the inode bmap blocks
+		addd scratchblk+6	; and the data bmap blocks
 		std startofinodes	; to get the start of our inodes
 
 		ldx #magicmsg		; display the magic value
-		ldy #fssuperblk+16	
+		ldy #scratchblk+16	
 		lbsr serialputlab	; with a handy sub
 
 		ldx #startinodemsg	; display the block offset value
@@ -1034,6 +1076,18 @@ readbyte:	lbsr parseinput
 		clra
 		rts
 
+showstick:	lbsr readjoystick
+
+		ldx #outputbuffer
+		lbsr bytetoaschex
+		clr ,x+
+		ldx #outputbuffer
+		lbsr serialputstr
+		ldx #newlinemsg
+		lbsr serialputstr
+		clra
+		rts
+
 testvramread:	lbsr parseinput		; parse hexes, filling out inputbuffer
 		lda ,y+			; get the type
 		cmpa #2			; is it a word?
@@ -1042,9 +1096,13 @@ testvramread:	lbsr parseinput		; parse hexes, filling out inputbuffer
 		lda ,y+			; get the type
 		cmpa #2			; is it a word?
 		lbne generalerror	; yes, mark it as bad
-		ldy ,y++		; length/count of bytes
+		ldu ,y++		; length/count of bytes
+		lda ,y+			; get the type
+		cmpa #2			; is it a word?
+		lbne generalerror	; yes, mark it as bad
+		ldy ,y			; vram address
 
-		lbsr ymtestread
+		lbsr ymread
 
 		rts
 
@@ -1056,12 +1114,32 @@ testvramwrite:	lbsr parseinput		; parse hexes, filling out inputbuffer
 		lda ,y+			; get the type
 		cmpa #2			; is it a word?
 		lbne generalerror	; yes, mark it as bad
-		ldy ,y++		; length/count of bytes
+		ldu ,y++		; length/count of bytes
+		lda ,y+			; get the type
+		cmpa #2			; is it a word?
+		lbne generalerror	; yes, mark it as bad
+		ldy ,y			; vram address
 
-		lbsr ymtestwrite
+		lbsr ymwrite
 
 		rts
 
+testreg:	lbsr parseinput		; parse hexes, filling out inputbuffer
+		lda ,y+			; get the type
+		cmpa #1			; is it a word?
+		lbne generalerror	; validation error
+		ldb ,y+			; start address
+		lda ,y+			; get the type
+		cmpa #1			; is it a word?
+		lbne generalerror	; yes, mark it as bad
+		lda ,y+			; length/count of bytes
+
+		sta VDIRECTPORT
+		stb VDIRECTPORT
+
+		clra
+
+		rts
 
 
 ;;; END OF HIGH LEVEL COMMANDS
@@ -1073,7 +1151,7 @@ flasher:	ldx #flashreadymsg	; tell other end it can send now
 
 ; read 64bytes from the serial port into ram
 
-		ldy #ROMSTART		; setup the counter into rom
+		ldu #ROMSTART		; setup the counter into rom
 inflashblk:	ldx #flashblock		; this is the block in ram we...
 		ldb #64			; are copying into
 inflash:	lbsr serialgetchar	; get the byte from the port
@@ -1086,7 +1164,7 @@ inflash:	lbsr serialgetchar	; get the byte from the port
 		ldx #flashblock		; after we have a block
 		ldb #64			; of 64 bytes
 outflash:	lda ,x+			; get the byte from ram
-		sta ,y+			; and write it into the rom
+		sta ,u+			; and write it into the rom
 		decb			; reduce byte counter
 		bne outflash		; back for more if non zero
 
@@ -1101,16 +1179,16 @@ flashdelayloop:	leax -1,x		; dey
 
 		lda #0x23		; '#'
 		lbsr serialputchar	; send the char
-		cmpy #ROMEND+1		; see if we are the end of rom
+		cmpu #ROMEND+1		; see if we are the end of rom
 		bne inflashblk		; back to the next block
 
 ; send the content of the rom back, so the sender knows what was written -
 ; we can't do anything if it didn't write, but at least we know
 
-		ldy #ROMSTART		; back to the start
-verflash:	lda ,y+			; get the byte
+		ldu #ROMSTART		; back to the start
+verflash:	lda ,u+			; get the byte
 		lbsr serialputchar	; output it
-		cmpy #ROMEND+1
+		cmpu #ROMEND+1
 		bne verflash
 
 ; we could in theory try again but good or bad, do a reset on the new
@@ -1129,4 +1207,6 @@ verflash:	lda ,y+			; get the byte
 		.include 'disassembly.asm'
 		.include 'font.asm'
 		.include 'v99.asm'
+		.include 'keyboard.asm'
+
 

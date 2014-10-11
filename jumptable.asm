@@ -36,3 +36,6 @@ jay8910playtune::	jmp ay8910playtune
 ;; 11/12/2013
 jspiwriteblock::	jmp spiwriteblock
 jspireadblock::		jmp spireadblock
+
+;; 26/09/2014
+jreadjoystick::		jmp readjoystick

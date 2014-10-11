@@ -53,7 +53,7 @@ clear:		clr ,x+
 		jsr jserialgetbyte
 		sta 4,y
 
-		lda #0xff
+		lda #0xfe
 		jsr jspistart		; mark with start
 
 		leax spibuffer,pcr
