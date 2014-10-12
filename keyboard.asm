@@ -70,8 +70,8 @@ normaltab:
 
 ; column g
 
-		.ascii '£'
-		.ascii '/'
+		.byte 0
+		.ascii '*'
 		.ascii ';'
 		.ascii '/'
 		.byte 0			; right shift
@@ -181,7 +181,14 @@ shifttab:
 		.byte 0			; f7
 
 keyhandler:	lda PORTA6522
-		bita #0x80
+		ldb keyrawmode
+		tstb
+		beq asciimode
+		ldx #keybuffer
+		bsr keypushbuf
+		rts
+
+asciimode:	bita #0x80
 		beq keydown
 		clrb
 		bra keydownend
@@ -212,29 +219,29 @@ asciiconvert:	ldx #keybuffer
 		ldx #normaltab
 asciiconvertdo:	lda a,x			; find ascii value
 		ldx #keybuffer
-		bsr asciipushbuf
+		bsr keypushbuf
 asciiconverto:	rts
 
 asciishifted:	ldx #shifttab
 		bra asciiconvertdo
 
 asciireturn:	lda #CR
-		bsr asciipushbuf
+		bsr keypushbuf
 		lda #LF
-		bsr asciipushbuf
+		bsr keypushbuf
 		bra asciiconverto
 
 asciibacksp:	lda #BS
-		bsr asciipushbuf
+		bsr keypushbuf
 		bra asciiconverto
 
 ; sub to push a into the keyboard buffer
 
-asciipushbuf:	tsta				; don't fill nulls
-		beq asciipushbufo
+keypushbuf:	tsta				; don't fill nulls
+		beq keypushbufo
 		ldb keywritepointer
 		sta b,x
 		incb
 		andb #0x3f
 		stb keywritepointer
-asciipushbufo:	rts
+keypushbufo:	rts
