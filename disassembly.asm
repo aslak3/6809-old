@@ -553,7 +553,7 @@ rawbyteascloop:	lda ,y+			; get the byte from the stream
 		clr ,x			; so we can (finally) add a null
 
 		ldx #outputbuffer	; send the whole line
-		lbsr serialputstr	; to the terminal
+		lbsr ioputstr		; to the terminal
 
 		ldx disasscounter	; decrement the opcode
 		leax -1,x		; ..

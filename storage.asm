@@ -71,7 +71,7 @@ idemount:	clr IDELBA0
 		beq idemountmbr
 
 		ldx #nombrmsg
-		lbsr serialputstr
+		lbsr ioputstr
 
 		clra
 		clrb
@@ -86,7 +86,7 @@ idemountmbr:	ldx #idescratchsec+0x01be+0x08
 
 		ldx #partstartmsg
 		ldy #firstpartsects
-		lbsr serialputlab
+		lbsr ioputlab
 
 		rts
 
@@ -264,7 +264,7 @@ nextdirent:	leax ,u++
 		lbsr concatstr
 		clr ,x+
 		ldx #outputbuffer
-		lbsr serialputstr
+		lbsr ioputstr
 skipdir:	leau 30,u
 		cmpu #scratchdirblk+1024
 		bne nextdirent

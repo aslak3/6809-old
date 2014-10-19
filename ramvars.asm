@@ -4,12 +4,20 @@
 
 		.org 0
 
+; the current open channel
+
+iogetcharp:	.rmb 2
+ioputcharp:	.rmb 2
+iogetwtop:	.rmb 2
+
+; monitor stack stuff
+
 spatentry:	.rmb 2
 userregs:	.rmb 11
 
 ; keyboard global
 
-keyrawmode:	.rmb 0		; 0 for acii, 1 for raw
+keyrawmode:	.rmb 1		; 0 for acii, 1 for raw
 keyreadpointer:	.rmb 1
 keywritepointer:.rmb 1
 keybuffer:	.rmb 64		; ascii or raw

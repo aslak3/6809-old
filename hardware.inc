@@ -204,6 +204,8 @@ SOUNDER		.equ 0xa200
 ; config data
 
 CONFIGJUMPERS	.equ 0xa300
+CONFIGWRITEROM	.equ 0x01
+CONFIGUARTMODE	.equ 0x02
 
 ; irq routing
 
@@ -237,3 +239,14 @@ STACKEND	.equ 0x1fff
 USERSTACKEND	.equ 0x2800
 
 PCOFFSET	.equ 10
+
+; macros
+
+.macro		enableinterrupts
+		andcc #0xaf
+.endm
+
+.macro		disableinterrupts
+		orcc #0x50
+.endm
+		

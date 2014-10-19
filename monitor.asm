@@ -45,7 +45,7 @@
 
 ; START OF GLOBAL READ-ONLY DATA
 
-greetingmsg:	.asciz '\r\n6809 Monitor v0.2\r\n\r\n'
+greetingmsg:	.asciz '\r\n6809 Monitor v0.3\r\n\r\n'
 youtypedmsg:	.asciz 'You typed: '
 promptmsg:	.asciz 'Monitor: > '
 nosuchmsg:	.asciz 'No such command\r\n'
@@ -163,21 +163,32 @@ nextbyte:	clr ,x
 
 		clr SOUNDER
 
-init:		clr keyreadpointer
+init:		clr IRQFILTER		; clear interrupt regs
+		clr FIRQFILTER		; they will be init'd in inits
+
+		clr keyreadpointer
 		clr keywritepointer
 		lbsr serialinit		; setup the serial port
 		lbsr spiinit		; prepare the SPI
 		lbsr yminitterm
-	
-		ldx #resetmsg		; show prompt for flash
-		lbsr serialputstr
+		lbsr timerinit
 
-		lbsr serialgetchar	; wait for a key, getting the command
+		lbsr serialactive
+
+		ldx #resetmsg		; show prompt for flash
+		lbsr ioputstr
+
+		lbsr iogetwto		; wait for a key, getting the command
+
+		bne normalstart		; timeout
 
 		cmpa #0x66		; 'f'
-		bne normalstart		; not one? then normal startup
+		beq flashing
+		cmpa #0x20		; space
+		beq noscreen
+		bra normalstart
 
-		ldx #ROMSTART		; setup the rom copy to ram
+flashing:	ldx #ROMSTART		; setup the rom copy to ram
 		ldy #ROMCOPYSTART	; this is the second half of ram
 romcopy:	lda ,x+			; read in
 		sta ,y+			; and read out
@@ -189,16 +200,13 @@ romcopy:	lda ,x+			; read in
 		leax ROMCOPYSTART,x	; offset it forward where it now is 
 		jmp ,x			; jump to the new location of flasher
 
-normalstart:	ldx #greetingmsg	; greetings!
-		lbsr serialputstr	; output the greeting
+normalstart:	lbsr ymactive
+
+noscreen:	ldx #greetingmsg	; greetings!
+		lbsr ioputstr		; output the greeting
 
 		ldx #bootbeeps
 		lbsr ay8910playtune	; play booting beeps
-
-		clra			; reset uptime
-		clrb			; both bytes
-		std uptimeh		; and store high word
-		std uptimel		; and low word
 
 		lda #0x20		; beep frequency
 		sta SOUNDER		; set the beeper beeping
@@ -212,11 +220,8 @@ normalstart:	ldx #greetingmsg	; greetings!
 		
 		clr SOUNDER		; silence the beeper
 
-		clr IRQFILTER		; no non fast interrupts (yet)
-		lda #IRQ88C681
-		sta FIRQFILTER		; for the duart timer interrupt
 
-		andcc #0xaf		; enable interrupts
+		enableinterrupts	; enable interrupts
 
 		swi			; enter the monitor (mainloop)
 
@@ -224,7 +229,7 @@ normalstart:	ldx #greetingmsg	; greetings!
 ; the return address - print error and loop
 
 		ldx #badexitmsg		; if we get here then setup a msg
-		lbsr serialputstr	; print the message
+		lbsr ioputstr	; print the message
 badexitloop:	bra badexitloop		; loop on the spot
 
 ; fast irq routine - dispatch to device handlers
@@ -249,23 +254,9 @@ irqinterrupto:	rti
 keyhandlergo:	lbsr keyhandler
 		bra irqinterrupto
 
-; uptime counter - increment 32 bit counter
-
-timerhandler:	pshs a,x
-		lda STOPCT88681		; clear interrupt
-		ldx uptimel		; get current lowword uptime
-		leax 1,x		; add 1
-		stx uptimel		; store it back
-		bne timerhandlero	; if not 0 then done
-		ldx uptimeh		; otherwise low current highword
-		leax 1,x		; add 1
-		stx uptimeh		; store it back
-timerhandlero:	puls a,x
-		rts
-
 ; monitor entry point
 
-moninterrupt:	andcc #0xaf		; enable interrupts again
+moninterrupt:	enableinterrupts	; enable interrupts again
 
 		ldx #outputbuffer	; setup the "break" message
 		ldy #breakatmsg		; ...
@@ -279,16 +270,16 @@ moninterrupt:	andcc #0xaf		; enable interrupts again
 		clr ,x+			; add a null
 
 		ldx #outputbuffer	; reset the string pointer
-		lbsr serialputstr	; so it can be output
+		lbsr ioputstr		; so it can be output
 
 mainloop:	ldx #promptmsg		; ">" etc
-		lbsr serialputstr	; output that
+		lbsr ioputstr		; output that
 		
 		ldx #inputbuffer	; now we need a command
-		lbsr serialgetstr	; get the command (waiting as needed)
+		lbsr iogetstr		; get the command (waiting as needed)
 
 		ldx #newlinemsg
-		lbsr serialputstr	; tidy up the output with a newline
+		lbsr ioputstr	; tidy up the output with a newline
 
 		lda inputbuffer		; get the first char
 		ldx #commandarray	; setup the command pointer
@@ -301,11 +292,11 @@ nextcommand:	ldy ,x++		; get the sub address
 		bne commanderror	; error check for zero
 		bra mainloop		; back to top
 commanderror:	ldx #commfailedmsg
-		lbsr serialputstr	; show error
+		lbsr ioputstr	; show error
 		bra mainloop
 
 commandarraye:	ldx #nosuchmsg
-		lbsr serialputstr	; show error message
+		lbsr ioputstr	; show error message
 		bra mainloop
 
 ; general error handler branch for commands that fail
@@ -381,10 +372,10 @@ ascbyteloop:	lda b,y			; get the byte from memory
 		clr ,x+			; null terminator
 
 		ldx #outputbuffer	; reset back to the start
-		lbsr serialputstr	; so we can finally output it!
+		lbsr ioputstr	; so we can finally output it!
 
 		ldx #newlinemsg		; newline
-		lbsr serialputstr	; output it
+		lbsr ioputstr	; output it
 
 ; move onto the the next row
 
@@ -500,7 +491,7 @@ showregisters:	ldx #outputbuffer	; set output buffer
 		clr ,x+
 
 		ldx #outputbuffer	; and output it
-		lbsr serialputstr
+		lbsr ioputstr
 		clra			; we always succeed
 		rts
 
@@ -533,9 +524,9 @@ helpmsg:	.ascii 'Commands:\r\n'
 		.asciz '\r\n'
 
 showhelp:	ldx #greetingmsg	; show the greeting
-		lbsr serialputstr	; for the version number
+		lbsr ioputstr	; for the version number
 		ldx #helpmsg		; and the help text
-		lbsr serialputstr
+		lbsr ioputstr
 		clra			; we always suceed
 		rts
 
@@ -554,7 +545,7 @@ showuptime:	ldx #outputbuffer	; setup the output buffer
 		lbsr concatstr		; concat that too
 		clr ,x+			; terminate the string
 		ldx #outputbuffer	; reset the pointer
-		lbsr serialputstr	; output the string
+		lbsr ioputstr	; output the string
 		rts
 
 ; reset uptime back to 0
@@ -584,9 +575,9 @@ latchin:	;lda LATCH
 		lbsr bytetoaschex
 		clr ,x+
 		ldx #outputbuffer
-		lbsr serialputstr
+		lbsr ioputstr
 		ldx #newlinemsg
-		lbsr serialputstr
+		lbsr ioputstr
 
 		clra
 		rts
@@ -659,7 +650,7 @@ ideidentify:	lda #0xec		; this is the identify command
 		lbsr concatstr
 		clr ,x
 		ldx #outputbuffer
-		lbsr serialputstr
+		lbsr ioputstr
 
 		ldx #outputbuffer
 		ldy #firmwarerevmsg
@@ -671,7 +662,7 @@ ideidentify:	lda #0xec		; this is the identify command
 		lbsr concatstr
 		clr ,x
 		ldx #outputbuffer
-		lbsr serialputstr
+		lbsr ioputstr
 
 		ldx #outputbuffer
 		ldy #modelnomsg
@@ -683,7 +674,7 @@ ideidentify:	lda #0xec		; this is the identify command
 		lbsr concatstr
 		clr ,x+
 		ldx #outputbuffer
-		lbsr serialputstr
+		lbsr ioputstr
 
 		clra
 		rts
@@ -821,11 +812,11 @@ fsmount:	lbsr idemount		; do the mbr read etc
 
 		ldx #magicmsg		; display the magic value
 		ldy #scratchblk+16	
-		lbsr serialputlab	; with a handy sub
+		lbsr ioputlab	; with a handy sub
 
 		ldx #startinodemsg	; display the block offset value
 		ldy #startofinodes
-		lbsr serialputlab	; with a handy sub
+		lbsr ioputlab	; with a handy sub
 
 		rts
 
@@ -846,11 +837,11 @@ readinode:	lbsr parseinput
 
 		ldx #typemodemsg	; print the inode type and mode
 		ldy #inode
-		lbsr serialputlab	; using our fancy label+data printer
+		lbsr ioputlab	; using our fancy label+data printer
 
 		ldx #filesizemsg	; and the file size
 		ldy #inode+4
-		lbsr serialputlab	; using the same fancy printer
+		lbsr ioputlab	; using the same fancy printer
 
 		rts
 
@@ -887,7 +878,7 @@ listdirbyinode:	lbsr parseinput
 		rts
 
 listdirnotdir:	ldx #notdirmsg
-		lbsr serialputstr
+		lbsr ioputstr
 		lda #1
 		rts
 
@@ -920,44 +911,44 @@ xmodem:		lbsr parseinput
 		lbne generalerror
 		ldx ,y++
 
-blockloop:	lbsr serialgetchar	; get the "header byte"
+blockloop:	lbsr iogetchar	; get the "header byte"
 		cmpa #EOT		; EOT for end of file
 		beq xmodemout		; if so then we are done
 		cmpa #SOH		; SOH for start of block
 		bne xmodemerr		; if not then this is an error
 
-		lbsr serialgetchar	; blocks so far
+		lbsr iogetchar	; blocks so far
 		sta xmodemblkcount	; store the number of blocks
-		lbsr serialgetchar	; 255 less blocks so far
+		lbsr iogetchar	; 255 less blocks so far
 
 		clr xmodemchecksum	; clear the checksum
 
 		ldb #0x80		; 128 bytes per block
-byteloop:	lbsr serialgetchar	; get the byte for th efile
+byteloop:	lbsr iogetchar	; get the byte for th efile
 		sta ,x+			; store the byte
 		adda xmodemchecksum	; add the received byte the checksum
 		sta xmodemchecksum	; store the checksum on each byte
 		decb			; decrement our byte counter
 		bne byteloop		; see if there are more bytes
 		
-		lbsr serialgetchar	; get the checksum from sender
+		lbsr iogetchar	; get the checksum from sender
 		cmpa xmodemchecksum	; check it against the one we made
 		bne blockbad		; if no good, handle it
 
 		lda #ACK		; if good, then ACK the block
-		lbsr serialputchar	; send the ACK
+		lbsr ioputchar	; send the ACK
 
 		bra blockloop		; get more blocks
 
 blockbad:	lda #NAK		; oh no, it was bad
-		lbsr serialputchar	; send a NAK; sender resends block
+		lbsr ioputchar	; send a NAK; sender resends block
 
 		leax -0x80,x		; move back to start of the block
 		
 		bra blockloop		; try to get the same block again
 
 xmodemout:	lda #ACK		; at end of file, ACK the whole file
-		lbsr serialputchar
+		lbsr ioputchar
 
 		clra
 		rts
@@ -1002,34 +993,34 @@ parsetestout:	clra
 		rts
 
 bytefound:	ldx #bytefoundmsg
-		lbsr serialputstr
+		lbsr ioputstr
 		lda ,y+
 		ldx #outputbuffer
 		lbsr bytetoaschex
 		ldx #outputbuffer
-		lbsr serialputstr
+		lbsr ioputstr
 		ldx #newlinemsg
-		lbsr serialputstr
+		lbsr ioputstr
 		bra parsetestloop
 
 wordfound:	ldx #wordfoundmsg
-		lbsr serialputstr
+		lbsr ioputstr
 		ldd ,y++
 		ldx #outputbuffer
 		lbsr wordtoaschex
 		ldx #outputbuffer
-		lbsr serialputstr
+		lbsr ioputstr
 		ldx #newlinemsg
-		lbsr serialputstr
+		lbsr ioputstr
 		bra parsetestloop
 
 stringfound:	ldx #stringfoundmsg
-		lbsr serialputstr
+		lbsr ioputstr
 		tfr y,x
-		lbsr serialputstr
+		lbsr ioputstr
 		tfr x,y
 		ldx #newlinemsg
-		lbsr serialputstr
+		lbsr ioputstr
 		bra parsetestloop		
 
 ; b BB - set memory bank
@@ -1052,9 +1043,9 @@ getbank:	lda BANKLATCH
 		lbsr bytetoaschex
 		clr ,x+
 		ldx #outputbuffer
-		lbsr serialputstr
+		lbsr ioputstr
 		ldx #newlinemsg
-		lbsr serialputstr
+		lbsr ioputstr
 		clra
 		rts
 
@@ -1070,9 +1061,9 @@ readbyte:	lbsr parseinput
 		lbsr bytetoaschex
 		clr ,x+
 		ldx #outputbuffer
-		lbsr serialputstr
+		lbsr ioputstr
 		ldx #newlinemsg
-		lbsr serialputstr
+		lbsr ioputstr
 		clra
 		rts
 
@@ -1082,9 +1073,9 @@ showstick:	lbsr readjoystick
 		lbsr bytetoaschex
 		clr ,x+
 		ldx #outputbuffer
-		lbsr serialputstr
+		lbsr ioputstr
 		ldx #newlinemsg
-		lbsr serialputstr
+		lbsr ioputstr
 		clra
 		rts
 
@@ -1147,14 +1138,14 @@ testreg:	lbsr parseinput		; parse hexes, filling out inputbuffer
 ; flasher
 
 flasher:	ldx #flashreadymsg	; tell other end it can send now
-		lbsr serialputstr
+		lbsr ioputstr
 
 ; read 64bytes from the serial port into ram
 
 		ldu #ROMSTART		; setup the counter into rom
 inflashblk:	ldx #flashblock		; this is the block in ram we...
 		ldb #64			; are copying into
-inflash:	lbsr serialgetchar	; get the byte from the port
+inflash:	lbsr iogetchar	; get the byte from the port
 		sta ,x+			; store it
 		decb			; we store 64bytes
 		bne inflash		; back to the next byte
@@ -1178,7 +1169,7 @@ flashdelayloop:	leax -1,x		; dey
 ; next one
 
 		lda #0x23		; '#'
-		lbsr serialputchar	; send the char
+		lbsr ioputchar	; send the char
 		cmpu #ROMEND+1		; see if we are the end of rom
 		bne inflashblk		; back to the next block
 
@@ -1187,7 +1178,7 @@ flashdelayloop:	leax -1,x		; dey
 
 		ldu #ROMSTART		; back to the start
 verflash:	lda ,u+			; get the byte
-		lbsr serialputchar	; output it
+		lbsr ioputchar	; output it
 		cmpu #ROMEND+1
 		bne verflash
 
@@ -1208,5 +1199,5 @@ verflash:	lda ,u+			; get the byte
 		.include 'font.asm'
 		.include 'v99.asm'
 		.include 'keyboard.asm'
-
-
+		.include 'timer.asm'
+		.include 'io.asm'

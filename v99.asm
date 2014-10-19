@@ -112,6 +112,21 @@ linecalcnext:	sty ,x++
 		clr ymrow
 		clr ymcol
 
+		; for the keyboard
+
+		; via interrupt routing
+
+		lda IRQFILTER
+		ora #IRQ65C22
+		sta IRQFILTER
+
+		; via handshaking etc
+
+		lda #0x08
+		sta PCR6522
+		lda #0x82
+ 		sta IER6522
+
 		rts
 
 ymclearvram:	lda #1
@@ -278,5 +293,33 @@ scrollclearn:	sta VPORT0
 		leay -1,y
 		bne scrollclearn
 		puls x,u
+		rts
+
+; gets a character and sticks it in a
+
+ymgetchar:	lda keywritepointer
+		suba keyreadpointer
+		bne keyfound
+;		sync
+		bra ymgetchar
+keyfound:	pshs b,x
+		ldb keyreadpointer
+		ldx #keybuffer
+		lda b,x
+		incb
+		andb #0x3f
+		stb keyreadpointer
+		puls b,x
+		rts
+
+
+; make the ym port the current active io device
+
+ymactive:	ldx #ymgetchar
+		stx iogetcharp
+		ldx #ymputchar
+		stx ioputcharp
+		ldx #ionull
+		stx iogetwto
 		rts
 		

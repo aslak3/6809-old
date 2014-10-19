@@ -227,8 +227,6 @@ asciishifted:	ldx #shifttab
 
 asciireturn:	lda #CR
 		bsr keypushbuf
-		lda #LF
-		bsr keypushbuf
 		bra asciiconverto
 
 asciibacksp:	lda #BS

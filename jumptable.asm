@@ -1,8 +1,8 @@
 jreset::		jmp reset
 
-jserialputchar::	jmp serialputchar
-jserialputstr::		jmp serialputstr
-jserialputlab::		jmp serialputlab
+jserialputchar::	jmp ioputchar
+jserialputstr::		jmp ioputstr
+jserialputlab::		jmp ioputlab
 
 jspistart::		jmp spistart
 jspistop::		jmp spistop
@@ -27,7 +27,7 @@ jdelay::		jmp delay
 jwordswap::		jmp wordswap
 
 ;; 14/10/2013 extensions
-jserialgetbyte::	jmp serialgetbyte
+jserialgetbyte::	jmp iogetbyte
 
 ;; 15/11/2013 extensions
 jay8910playnote::	jmp ay8910playnote
