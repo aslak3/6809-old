@@ -39,3 +39,19 @@ jspireadblock::		jmp spireadblock
 
 ;; 26/09/2014
 jreadjoystick::		jmp readjoystick
+
+;; 08/11/2014
+jioputchar::		jmp ioputchar
+jioputstr::		jmp ioputstr
+jiogetchar::		jmp iogetchar
+jiogetstr::		jmp iogetstr
+jioputlab::		jmp ioputlab
+
+jiogetbyte::		jmp iogetbyte
+
+jvinit::		jmp vinit
+jvvread::		jmp vread
+jvwrite::		jmp vwrite
+jvseekcommon::		jmp vseekcommon
+jvseekread::		jmp vseekread
+jvseekwrite::		jmp vseekwrite

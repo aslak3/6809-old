@@ -45,7 +45,7 @@
 
 ; START OF GLOBAL READ-ONLY DATA
 
-greetingmsg:	.asciz '\r\n6809 Monitor v0.3\r\n\r\n'
+greetingmsg:	.asciz '\r\n6809 Monitor v0.4\r\n\r\n'
 youtypedmsg:	.asciz 'You typed: '
 promptmsg:	.asciz 'Monitor: > '
 nosuchmsg:	.asciz 'No such command\r\n'
@@ -116,9 +116,9 @@ commandarray:	.word dumpmemory
 		.ascii 'L'
 		.word testvramwrite
 		.ascii 'S'
-		.word yminitterm
+		.word terminit
 		.ascii 'Y'
-		.word ymclearscreen
+		.word tclearscreen
 		.ascii 'V'
 		.word testreg
 		.ascii 'K'
@@ -170,7 +170,7 @@ init:		clr IRQFILTER		; clear interrupt regs
 		clr keywritepointer
 		lbsr serialinit		; setup the serial port
 		lbsr spiinit		; prepare the SPI
-		lbsr yminitterm
+		lbsr terminit
 		lbsr timerinit
 
 		lbsr serialactive
@@ -200,7 +200,7 @@ romcopy:	lda ,x+			; read in
 		leax ROMCOPYSTART,x	; offset it forward where it now is 
 		jmp ,x			; jump to the new location of flasher
 
-normalstart:	lbsr ymactive
+normalstart:	lbsr tactive
 
 noscreen:	ldx #greetingmsg	; greetings!
 		lbsr ioputstr		; output the greeting
@@ -911,44 +911,44 @@ xmodem:		lbsr parseinput
 		lbne generalerror
 		ldx ,y++
 
-blockloop:	lbsr iogetchar	; get the "header byte"
+blockloop:	lbsr serialgetchar	; get the "header byte"
 		cmpa #EOT		; EOT for end of file
 		beq xmodemout		; if so then we are done
 		cmpa #SOH		; SOH for start of block
 		bne xmodemerr		; if not then this is an error
 
-		lbsr iogetchar	; blocks so far
+		lbsr serialgetchar	; blocks so far
 		sta xmodemblkcount	; store the number of blocks
-		lbsr iogetchar	; 255 less blocks so far
+		lbsr serialgetchar	; 255 less blocks so far
 
 		clr xmodemchecksum	; clear the checksum
 
 		ldb #0x80		; 128 bytes per block
-byteloop:	lbsr iogetchar	; get the byte for th efile
+byteloop:	lbsr serialgetchar	; get the byte for th efile
 		sta ,x+			; store the byte
 		adda xmodemchecksum	; add the received byte the checksum
 		sta xmodemchecksum	; store the checksum on each byte
 		decb			; decrement our byte counter
 		bne byteloop		; see if there are more bytes
 		
-		lbsr iogetchar	; get the checksum from sender
+		lbsr serialgetchar	; get the checksum from sender
 		cmpa xmodemchecksum	; check it against the one we made
 		bne blockbad		; if no good, handle it
 
 		lda #ACK		; if good, then ACK the block
-		lbsr ioputchar	; send the ACK
+		lbsr serialputchar	; send the ACK
 
 		bra blockloop		; get more blocks
 
 blockbad:	lda #NAK		; oh no, it was bad
-		lbsr ioputchar	; send a NAK; sender resends block
+		lbsr serialputchar	; send a NAK; sender resends block
 
 		leax -0x80,x		; move back to start of the block
 		
 		bra blockloop		; try to get the same block again
 
 xmodemout:	lda #ACK		; at end of file, ACK the whole file
-		lbsr ioputchar
+		lbsr serialputchar
 
 		clra
 		rts
@@ -1093,7 +1093,7 @@ testvramread:	lbsr parseinput		; parse hexes, filling out inputbuffer
 		lbne generalerror	; yes, mark it as bad
 		ldy ,y			; vram address
 
-		lbsr ymread
+		lbsr vread
 
 		rts
 
@@ -1111,7 +1111,7 @@ testvramwrite:	lbsr parseinput		; parse hexes, filling out inputbuffer
 		lbne generalerror	; yes, mark it as bad
 		ldy ,y			; vram address
 
-		lbsr ymwrite
+		lbsr vwrite
 
 		rts
 
@@ -1201,3 +1201,4 @@ verflash:	lda ,u+			; get the byte
 		.include 'keyboard.asm'
 		.include 'timer.asm'
 		.include 'io.asm'
+		.include 'terminal.asm'

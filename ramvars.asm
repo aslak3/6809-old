@@ -70,7 +70,7 @@ ayshape:	.rmb 1
 ayduration:	.rmb 2
 aysharp:	.rmb 1
 
-ymlinestarts:	.rmb 2*25
-ymrow:		.rmb 1
-ymcol:		.rmb 1
-ymscrollline:	.rmb 80
+tlinestarts:	.rmb 2*25
+trow:		.rmb 1
+tcol:		.rmb 1
+tscrollline:	.rmb 80

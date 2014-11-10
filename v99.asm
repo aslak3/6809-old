@@ -1,52 +1,23 @@
-; ym9938 (and 58)
+; v9938 (and 58) - low level routines
 
 ; stores whats in a in the constant register, register
 
-.macro		sleep
-		nop
-		nop
-		nop
-.endm
-
-.macro		loadareg register
-		sta VDIRECTPORT
-		lda #register|0x80
-		sta VDIRECTPORT
-.endm
-
-; stores the value in the register
-
-.macro		loadconstreg register, value
-		lda #value
-		sta VDIRECTPORT
-		lda #register|0x80
-		sta VDIRECTPORT
-.endm
-
-; gets the value of the status register
-
-.macro		getastatusreg register
-		loadareg VSTATUSREG
-		lda VSTATUSPORT
-.endm
-
-; trival colour palette for text mode
-
+		.include 'v99.inc'
 
 ; save into the registers, starting from the register in a. the values
 ; pointed by x and counted by y are copied in
 
-ymindirect:	ora #0x80		; auto incmreneting mode
+vindirect:	ora #0x80		; auto incmreneting mode
 		loadareg VINDIRECTREG	; set up the indirect reg
-ymindirectnext:	lda ,x+			; get the value
+vindirectnext:	lda ,x+			; get the value
 		sta VINDIRECTPORT	; save it in the register
 		leay -1,y		; dec the counter
-		bne ymindirectnext	; see if there is more
+		bne vindirectnext	; see if there is more
 		rts
 
 ; sets the colour in a to the r g b poited to by x
 
-ymsetcolour:	pshs a			; save the current colour
+vsetcolour:	pshs a			; save the current colour
 		loadareg VPALETTEREG	; we are writing to the colour reg
 		lda ,x+			; get red
 		lsla			; move it to the high nibble
@@ -63,124 +34,63 @@ ymsetcolour:	pshs a			; save the current colour
 ; set the colours - x points at r g b list, y sets the number of colours to
 ; set
 
-ymsetcolours:	clra			; start from col 0
-ymsetcoloursn:	bsr ymsetcolour		; sets this colour
+vsetcolours:	clra			; start from col 0
+vsetcoloursn:	bsr vsetcolour		; sets this colour
 		inca			; next colour
 		leay -1,y		; dec the count of colours
-		bne ymsetcoloursn	; more?
+		bne vsetcoloursn	; more?
 		rts
-
-twocolpalette:	.byte 0x00, 0x00, 0x00	; black background
-		.byte 0x07, 0x07, 0x07	; white text
 
 ; sets up "core" registers
 
-yminitterm:	loadconstreg VBANKREG, 0x00
-		loadconstreg VDISPLAYPOSREG, 0x00
+vinit:		loadconstreg VBANKREG, 0x00
+		loadconstreg VDISPLAYPOSREG, 0x0e
 		loadconstreg VDISPLAYOFFREG, 0x00
 		loadconstreg VINTLINEREG, 0x00
 
-ymsettext1mode:	loadconstreg VMODE0REG, 0b00000100
-		loadconstreg VMODE1REG, 0b01010000
-		loadconstreg VMODE2REG, 0b00001000
-		loadconstreg VMODE3REG, 0b00000010
-
-		loadconstreg VPATTBASEREG, 0x00	; bottom half - patterns
-		loadconstreg VVIDBASEREG, 0x23	; top half - video
-
-		ldx #twocolpalette	; set the colour reg pointer
-		ldy #2			; 2 colours
-		lbsr ymsetcolours
-
-		loadconstreg VCOLOUR1REG, 0x10
-
-		lbsr ymclearvram
-
-		ldx #fontdata
-		ldy #8*32
-		ldu #8*96		; 96 characters of font data
-		lbsr ymwrite
-
-		lda #24
-		ldx #ymlinestarts
-		ldy #0x8000
-linecalcnext:	sty ,x++
-		leay 80,y
-		deca
-		bne linecalcnext
-
-		clr ymrow
-		clr ymcol
-
-		; for the keyboard
-
-		; via interrupt routing
-
-		lda IRQFILTER
-		ora #IRQ65C22
-		sta IRQFILTER
-
-		; via handshaking etc
-
-		lda #0x08
-		sta PCR6522
-		lda #0x82
- 		sta IER6522
+		lbsr vclearvram
 
 		rts
 
-ymclearvram:	lda #1
-		ldy #0x0000
-		lbsr ymseekvram
+vclearvram:	ldy #0x0000
+		lbsr vseekcommon
+		lbsr vseekwrite
 		ldx #0x0000
 		clra
-ymclearnext:	sta VPORT0
+vclearnext:	sta VPORT0
 		leax 1,x
-		bne ymclearnext		; 64kbytes
-		rts
-
-ymclearscreen:	clr ymrow
-		clr ymcol
-		lda #1
-		ldy #0x8000
-		lbsr ymseekvram
-		ldx 80*24
-		clra
-ymclearscnext:	sta VPORT0
-		leax 1,x
-		bne ymclearscnext
+		bne vclearnext		; 64kbytes
 		rts
 
 ; writes to y in vram, count u bytes, from x in mpu ram
 
-ymwrite:	lda #1			; writing
-		pshs y
-		lbsr ymseekvram
+vwrite:		pshs y
+		lbsr vseekcommon
+		lbsr vseekwrite
 		tfr u,y			; leau does not set z, so need y
-ymwritenext:	lda ,x+
+vwritenext:	lda ,x+
 		sta VPORT0
 		leay -1,y
-		bne ymwritenext
+		bne vwritenext
 		puls y
 		rts
 
 ; reads into x in mpu, count u bytes, from y in vram
 
-ymread:		clra			; reading
-		pshs y
-		lbsr ymseekvram		; setup for writing using y
+vread:		pshs y
+		lbsr vseekcommon	; setup for writing using y
+		lbsr vseekread
 		tfr u,y			; leau does not set z, so need y
-ymreadnext:	lda VPORT0
+vreadnext:	lda VPORT0
 		sta ,x+
 		leay -1,y
-		bne ymreadnext
+		bne vreadnext
 		puls y
 		rts
 
 ; prepare the vdc for reading or writing from y in vram. a is 1 for writing
 
-ymseekvram:	pshs a			; save writing state
-		tfr y,d
+vseekcommon:	tfr y,d
 		lsra
 		lsra
 		lsra
@@ -191,135 +101,13 @@ ymseekvram:	pshs a			; save writing state
 		tfr y,d			; retore original address
 		stb VADDRPORT		; the low 8 bits of address (easy)
 		anda #0b00111111	; mask out the high two bits
-		puls b			; get writing flag into b
-		tstb			; see if we are not writing
-		beq ymseekout		; if reading then just output
-		ora #0b01000000		; set writing mode
-ymseekout:	sta VADDRPORT
+		rts
+
+vseekwrite:	ora #0b01000000		; set writing mode
+		sta VADDRPORT
 		sleep
 		rts
 
-ymputchar:	cmpa #CR
-		beq handlecr
-		cmpa #LF
-		beq handlelf
-		cmpa #BS
-		beq handlebs
-
-		lbsr ymmovecursor
-		sta VPORT0
+vseekread:	sta VADDRPORT
 		sleep
-		lda #127
-		sta VPORT0
-
-		lda ymcol
-		inca
-		sta ymcol
-		cmpa #80
-		beq newline
-
 		rts
-		
-handlecr:	lbsr ymblankcurrent
-		clr ymcol
-		rts
-
-newline:	clr ymcol
-handlelf:	lda ymrow
-		inca
-		sta ymrow
-		cmpa #24
-		bne newlineout
-		lbsr ymscroller
-		lda #23
-		sta ymrow
-newlineout:	rts
-
-handlebs:	lbsr ymblankcurrent
-		tst ymcol
-		beq oldline
-		dec ymcol
-		lbsr ymdrawcursor
-		rts
-
-oldline:	lda #79
-		sta ymcol
-		dec ymrow
-		rts
-
-ymdrawcursor:	lbsr ymmovecursor
-		lda #127
-		sta VPORT0
-		rts
-
-ymmovecursor:	pshs a
-		ldb ymrow
-		lslb
-		ldy #ymlinestarts
-		ldy b,y
-		ldb ymcol
-		leay b,y
-		lda #1
-		lbsr ymseekvram
-		puls a
-		rts
-
-ymblankcurrent:	lbsr ymmovecursor
-		clra
-		sta VPORT0
-		rts
-
-ymscroller:	pshs x,u
-		ldb #23
-		ldy #0x8000+80
-ymscrollernext:	pshs b
-		ldx #ymscrollline
-		ldu #80
-		lbsr ymread
-		leay -80,y
-		ldx #ymscrollline
-		ldu #80
-		lbsr ymwrite
-		leay 80+80,y
-		puls b
-		decb
-		bne ymscrollernext
-		lda #1
-		leay -80,y
-		lbsr ymseekvram
-		clra
-		ldy #80
-scrollclearn:	sta VPORT0
-		leay -1,y
-		bne scrollclearn
-		puls x,u
-		rts
-
-; gets a character and sticks it in a
-
-ymgetchar:	lda keywritepointer
-		suba keyreadpointer
-		bne keyfound
-;		sync
-		bra ymgetchar
-keyfound:	pshs b,x
-		ldb keyreadpointer
-		ldx #keybuffer
-		lda b,x
-		incb
-		andb #0x3f
-		stb keyreadpointer
-		puls b,x
-		rts
-
-
-; make the ym port the current active io device
-
-ymactive:	ldx #ymgetchar
-		stx iogetcharp
-		ldx #ymputchar
-		stx ioputcharp
-		ldx #ionull
-		stx iogetwto
-		rts
-		
