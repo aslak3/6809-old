@@ -1080,12 +1080,12 @@ snaketiles:
 ; $81 - Snake head
 
 		.byte 0b00111100
-		.byte 0b01000010
-		.byte 0b10100101
-		.byte 0b10000001
-		.byte 0b10100101
-		.byte 0b10111101
-		.byte 0b01000010
+		.byte 0b01111110
+		.byte 0b10011001
+		.byte 0b10011001
+		.byte 0b11111111
+		.byte 0b11100111
+		.byte 0b01111110
 		.byte 0b00111100
 
 

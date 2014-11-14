@@ -58,7 +58,7 @@ vclearvram:	ldy #0x0000
 		ldx #0x0000
 		clra
 vclearnext:	sta VPORT0
-		leax 1,x
+		leax -1,x
 		bne vclearnext		; 64kbytes
 		rts
 

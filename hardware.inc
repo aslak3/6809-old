@@ -144,6 +144,15 @@ AYENVSHAPE	.equ 0x0d	; envelope shape (low 4 bits)
 AYIOA		.equ 0x0e	; I/O port A data
 AYIOB		.equ 0x0f	; I/O port B data
 
+; joystick masks
+
+JOYUP		.equ 0x01
+JOYDOWN		.equ 0x02
+JOYLEFT		.equ 0x04
+JOYRIGHT	.equ 0x08
+JOYFIRE1	.equ 0x10
+JOYFIRE2	.equ 0x20
+
 ;;; expansion
 
 ; 6522

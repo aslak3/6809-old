@@ -43,16 +43,18 @@ serialgetcharo:	rts
 
 ; serialgetwto - same as above but with a c. 2 sec timeout
 
-serialgetwto:	ldx #0xffff
+serialgetwto:	pshs x
+		ldx #0xffff
 timeoutloop:	lda SRA88681
 		anda #0b00000001
 		beq notready
 		lda RHRA88681
 		clrb			; no timeout occured
-		rts
+		bra serialgettwoo
 notready:	leax -1,x
 		bne timeoutloop
 		ldb #1			; timeout occured
+serialgettwoo:	puls x
 		rts
 
 ; make the serial port the current active io device

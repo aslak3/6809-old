@@ -911,8 +911,14 @@ xmodem:		lbsr parseinput
 		lbne generalerror
 		ldx ,y++
 
-blockloop:	lbsr serialgetchar	; get the "header byte"
-		cmpa #EOT		; EOT for end of file
+waitforstart:	lda #NAK		; ask for a start
+		lbsr serialputchar
+		lbsr serialgetwto	; wait 2 sec for the start
+		beq blockloopnoget	; got a start, no need to re-read
+		bra waitforstart	; still waiting, so poke again
+
+blockloop:	lbsr serialgetchar	; get header byte	
+blockloopnoget:	cmpa #EOT		; EOT for end of file
 		beq xmodemout		; if so then we are done
 		cmpa #SOH		; SOH for start of block
 		bne xmodemerr		; if not then this is an error

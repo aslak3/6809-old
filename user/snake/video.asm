@@ -41,101 +41,28 @@ printattabn:	sty ,x++
 		ldu #8*8		; 8 characters of font data
 		jsr jvwrite
 
-		ldy #0x8000
-		jsr jvseekcommon
-		jsr jvseekwrite
-		clra
-msgdataloop:	sta VPORT0
-		inca
-		bne msgdataloop
-
 		leax colours,pcr
 		ldy #0x4000
 		ldu #0x20
 		jsr jvwrite
 
-		lda #12
-		ldb #10
-		leax testmessage,pcr
+		clra
+		clrb
+		pshu a,b
+		lda #23
+		ldb #31
+		pshu a,b
+		lbsr drawbox
+		leau 4,u
+
+		lda #0
+		ldb #16-4
+		leax titlemessage,pcr
 		lbsr printstrat
-
-
-
-		lda #TOPLEFTTILE
-		sta stamp,pcr
-		clra
-		clrb
-		lbsr stampat
-
-		lda #TOPTILE
-		sta stamp,pcr
-		clra
-		ldb #1
-topborder:	lbsr stampat
-		incb
-		cmpb #31
-		bne topborder
-
-		lda #TOPRIGHTTILE
-		sta stamp,pcr
-		clra
-		ldb #31
-		lbsr stampat
-
-		lda #RIGHTTILE
-		sta stamp,pcr
-		lda #1
-		ldb #31
-rightborder:	lbsr stampat
-		inca
-		cmpa #23
-		bne rightborder
-
-		lda #BOTTOMRIGHTTILE
-		sta stamp,pcr
-		lda #23
-		ldb #31
-		lbsr stampat
-
-		lda #BOTTOMTILE
-		sta stamp,pcr
-		lda #23
-		ldb #1
-bottomborder:	lbsr stampat
-		incb
-		cmpb #31
-		bne bottomborder
-
-		lda #BOTTOMLEFTTILE
-		sta stamp,pcr
-		lda #23
-		clrb
-		lbsr stampat
-
-		lda #LEFTTILE
-		sta stamp,pcr
-		lda #1
-		clrb
-leftborder:	lbsr stampat
-		inca
-		cmpa #23
-		bne leftborder
-
-		lda #SNAKEBODYTILE
-		sta stamp,pcr
-		lda #8
-		ldb #2
-snaketest:	lbsr stampat
-		ldy #0xffff
-		jsr jdelay
-		incb
-		cmpb #30
-		bne snaketest
-
 
 		rts
 
-testmessage:	.asciz "Hello ZX Spectrum!"
+titlemessage:	.asciz " SNAKE! "
 
 ; Prints the string at x (until null) at row a, col b
 
@@ -146,10 +73,11 @@ printstrat:	leay printattab,pcr
 		jsr jvseekcommon
 		jsr jvseekwrite
 printstratn:	lda ,x+
+		beq printstratout
 		sta VPORT0
-		bne printstratn
+		bra printstratn
 
-		rts
+printstratout:	rts
 
 ; Set VRAM for writing to at row a, col b and output the char at stamp
 
@@ -167,12 +95,97 @@ stampat:	pshs a,b
 		puls a,b
 		rts
 
+peekat:		leay printattab,pcr
+		lsla
+		ldy a,y
+		leay b,y
+		jsr jvseekcommon
+		jsr jvseekread
+
+		lda VPORT0
+
+		rts
+
+; draw a box:
+; u+3 : top left : column
+; u+2 : top left : row
+; u+1 : bottom right, column
+; u+0 : bottom right, row
+
+drawbox:	lda #TOPLEFTTILE
+		sta stamp,pcr
+		lda 2,u
+		ldb 3,u
+		lbsr stampat
+
+		lda #TOPTILE
+		sta stamp,pcr
+		lda 2,u
+		ldb 3,u
+		incb
+topborder:	lbsr stampat
+		incb
+		cmpb 1,u
+		bne topborder
+
+		lda #TOPRIGHTTILE
+		sta stamp,pcr
+		lda 2,u
+		ldb 1,u
+		lbsr stampat
+
+		lda #RIGHTTILE
+		sta stamp,pcr
+		lda 2,u
+		ldb 1,u
+		inca
+rightborder:	lbsr stampat
+		inca
+		cmpa 0,u
+		bne rightborder
+
+		lda #BOTTOMRIGHTTILE
+		sta stamp,pcr
+		lda 0,u
+		ldb 1,u
+		lbsr stampat
+
+		lda #BOTTOMTILE
+		sta stamp,pcr
+		lda 0,u
+		ldb 3,u
+		incb
+bottomborder:	lbsr stampat
+		incb
+		cmpb 1,u
+		bne bottomborder
+
+		lda #BOTTOMLEFTTILE
+		sta stamp,pcr
+		lda 0,u
+		ldb 3,u
+		lbsr stampat
+
+		lda #LEFTTILE
+		sta stamp,pcr
+		lda 2,u
+		ldb 3,u
+		inca
+leftborder:	lbsr stampat
+		inca
+		cmpa 0,u
+		bne leftborder
+
+		rts
+
+; Variables
+
 printattab:	.rmb 2*24
 stamp:		.rmb 1
 
 colours:
 
-; Speccy font
+; Speccy font tiles
 
 		.byte 0x10
 		.byte 0x10
