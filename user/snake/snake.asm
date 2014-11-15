@@ -11,8 +11,6 @@
 
 		lbsr videoinit
 
-		clr snakebornflag,pcr
-
 		lda #12
 		leax rowsnake,pcr
 		clrb
@@ -27,7 +25,7 @@ colinitloop:	sta ,x+
 		decb
 		bne colinitloop
 
-		lda #100
+		lda #2
 		sta snakelength,pcr
 		clr headpos,pcr
 
@@ -35,23 +33,7 @@ colinitloop:	sta ,x+
 		lda #1
 		sta coldirection,pcr
 
-		lda #FOODTILE
-		sta stamp,pcr
-		lda #3
-		ldb #3
-		lbsr stampat
-
-		lda #FOODTILE
-		sta stamp,pcr
-		lda #10
-		ldb #30
-		lbsr stampat
-
-		lda #FOODTILE
-		sta stamp,pcr
-		lda #20
-		ldb #8
-		lbsr stampat
+		lbsr placenewfood
 
 mainloop:	clra
 		ldb headpos,pcr
@@ -133,6 +115,7 @@ testcollide:	leax rowsnake,pcr
 		ldb ,x
 
 		lbsr peekat
+		lda peek,pcr
 
 		rts
 
@@ -142,8 +125,23 @@ docollision:	cmpa #FOODTILE
 docollisiono:	rts
 
 yumyum:		inc snakelength,pcr
+		lbsr placenewfood
 		lda #1
 		bra docollisiono
+
+placenewfood:	lda #FOODTILE
+		sta stamp,pcr
+tryplaceagain:	lbsr randomnumber
+		anda #31
+		tfr a,b
+		lbsr randomnumber
+		cmpa #24
+		bhs tryplaceagain
+		lbsr peekat
+		tst peek,pcr
+		bne tryplaceagain
+		lbsr stampat
+		rts
 
 controlsnake:	jsr jreadjoystick
 		bita #JOYLEFT
@@ -172,6 +170,20 @@ moveupdown:	clr coldirection,pcr
 		sta rowdirection,pcr
 		bra controlsnakeo
 
+initrandom:	lda uptimel+1
+		sta randomseed
+		rts
+
+randomnumber:	lda randomseed
+		beq doeor
+		asla
+		beq noeor		; if the input was $80, skip the EOR
+		bcc noeor
+doeor:		eora #0x1d
+noeor:		sta randomseed
+
+		rts
+
 rowsnake:	.rmb 256
 colsnake:	.rmb 256
 headpos:	.rmb 1
@@ -180,7 +192,7 @@ snakelength:	.rmb 1
 rowdirection:	.rmb 1
 coldirection:	.rmb 1
 
-snakebornflag:	.rmb 1
+randomseed:	.rmb 1
 
 		.include 'graphics.asm'
 		.include 'video.asm'

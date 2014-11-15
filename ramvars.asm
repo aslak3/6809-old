@@ -50,8 +50,8 @@ statementend:	.rmb 2
 flashblock:	.rmb 64
 timeoutput:	.rmb 8
 
-uptimeh:	.rmb 2
-uptimel:	.rmb 2
+uptimeh::	.rmb 2
+uptimel::	.rmb 2
 
 idescratchsec:	.rmb 512
 firstpartsects:	.rmb 2

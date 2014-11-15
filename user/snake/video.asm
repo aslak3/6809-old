@@ -95,7 +95,8 @@ stampat:	pshs a,b
 		puls a,b
 		rts
 
-peekat:		leay printattab,pcr
+peekat:		pshs a,b
+		leay printattab,pcr
 		lsla
 		ldy a,y
 		leay b,y
@@ -103,7 +104,8 @@ peekat:		leay printattab,pcr
 		jsr jvseekread
 
 		lda VPORT0
-
+		sta peek,pcr
+		puls a,b
 		rts
 
 ; draw a box:
@@ -182,6 +184,7 @@ leftborder:	lbsr stampat
 
 printattab:	.rmb 2*24
 stamp:		.rmb 1
+peek:		.rmb 1
 
 colours:
 
