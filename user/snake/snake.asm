@@ -1,110 +1,123 @@
-; Make snake source
+; Main snake source
 
 		.include 'user.inc'
 		.include 'snake.inc'
 
 		.area PROG (REL)
 
-		.org 0
+		.org 0			; dummy. we are using pic here
 
-		ldu #USERSTACKEND
+		ldu #USERSTACKEND	; setup the user stack
 
-		lbsr videoinit
+		lbsr videoinit		; does basic init, clears vram
 
-		lda #12
-		leax rowsnake,pcr
-		clrb
-rowinitloop:	sta ,x+
-		decb
-		bne rowinitloop
+		; prepare the snake!
 
-		lda #16
-		leax colsnake,pcr
-		clrb
-colinitloop:	sta ,x+
-		decb
-		bne colinitloop
+		lda #12			; row coord of where snake starts
+		leax rowsnake,pcr	; get the top of the row table
+		clrb			; counter
+rowinitloop:	sta ,x+			; save the same row along the table
+		decb			; 256 bytess
+		bne rowinitloop		; back for more
 
-		lda #2
-		sta snakelength,pcr
-		clr headpos,pcr
+		lda #16			; col coord of whee snake starts
+		leax colsnake,pcr	; get the top of the col table
+		clrb			; counter
+colinitloop:	sta ,x+			; save the smae col along the table
+		decb			; 256 bytes
+		bne colinitloop		; back for more
 
-		clr rowdirection,pcr
-		lda #1
-		sta coldirection,pcr
+		lda #2			; start at length of two
+		sta snakelength,pcr	; save the length
+		clr headpos,pcr		; snake snarts at the top of table
 
-		lbsr placenewfood
+		clr rowdirection,pcr	; snake moves...
+		lda #1			; across to the right...
+		sta coldirection,pcr	; but not along at the start
 
-mainloop:	clra
-		ldb headpos,pcr
-		subb snakelength,pcr
-		lbsr drawsnakepart
+		lbsr randominit		; prepare the pseudo random numbers
+		lbsr placenewfood	; place the first food on the map
 
-		lda #SNAKEBODYTILE
-		ldb headpos,pcr
-		lbsr drawsnakepart
+		; main loop of the game
 
-		lbsr movesnake
+mainloop:	clra			; we are blanking out the far end
+		ldb headpos,pcr		; get the current end index
+		subb snakelength,pcr	; subtract the length (may wrap)
+		lbsr drawsnakepart	; and rubout the far end of the snake
 
-		ldb headpos,pcr
-		lbsr testcollide
+		lda #SNAKEBODYTILE	; draw over the last head tile
+		ldb headpos,pcr		; with a body tile
+		lbsr drawsnakepart	; snake is now headless :(
 
-		beq nocollision
+		lbsr movesnake		; move snake, inrementing headpos
 
-		lbsr docollision
-		beq death
+		ldb headpos,pcr		; load the new headpos
+		lbsr testcollide	; and see if theres been a collision
+		beq nocollision		; if not, skip
 
-nocollision:	lda #SNAKEHEADTILE
-		ldb headpos,pcr
-		lbsr drawsnakepart
+		lbsr docollision	; process the collision
+		beq death		; if it set zero, then snake is dead
 
-		ldx #0x2000
-controlloop:	lbsr controlsnake
-		leax -1,x
-		bne controlloop
+nocollision:	lda #SNAKEHEADTILE	; finally we can draw the new head
+		ldb headpos,pcr		; get the headposition again
+		lbsr drawsnakepart	; and draw the head
 
-		bra mainloop
+		ldx #0x2000		; delay the game
+controlloop:	lbsr controlsnake	; but in each delay loop, poll stick
+		leax -1,x		; decrement delay
+		bne controlloop		; until zero
 
-death:		swi
+		bra mainloop		; and back to the top again
 
-drawsnakepart:	sta stamp,pcr
+death:		swi			; for now, just exit
 
-		leax rowsnake,pcr
-		abx
-		lda ,x
+; draws a bit of the snake, tile in a. may be blank (0), maybe body or maybe
+; head. b has position along snake array we want to draw.
 
-		leax colsnake,pcr
-		abx
-		ldb ,x
+drawsnakepart:	sta stamp,pcr		; save the tile to draw for stampat
 
-		lbsr stampat
+		leax rowsnake,pcr	; setup row table pointer
+		abx			; add (unsigned) the snake pos
+		lda ,x			; and deref to get the row coord
+
+		leax colsnake,pcr	; setup the col table pointer
+		abx			; add (unsigned) the snake pos
+		ldb ,x			; and deref to get the col coord
+
+		lbsr stampat		; update screen with the new tile
 
 		rts
 
-movesnake:	ldb headpos,pcr
+; reads the current head position, and adds a new row and column to the
+; position arrays, taking into account the direction the snake is moving.
+; takes no parameters.
 
-		leax rowsnake,pcr
-		abx
-		lda ,x
-		adda rowdirection,pcr
-		leax rowsnake,pcr
-		incb
-		abx
-		sta ,x
+movesnake:	ldb headpos,pcr		; get the current head
 
-		ldb headpos,pcr
+		leax rowsnake,pcr	; setup row table pointer
+		abx			; add (unsigned) the snake pos
+		lda ,x			; and deref to get row of head
+		adda rowdirection,pcr	; add the current direction (row)
+		leax rowsnake,pcr	; setup table again
+		incb			; because we need to wrap around
+		abx			; but we are on the next index
+		sta ,x			; and finally we can save into it
 
-		leax colsnake,pcr
-		abx
-		lda ,x
-		adda coldirection,pcr
-		leax colsnake,pcr
-		incb
-		abx
-		sta ,x
+		ldb headpos,pcr		; same again but for cols
 
-		inc headpos,pcr
-		rts
+		leax colsnake,pcr	; ...
+		abx			; ...
+		lda ,x			; ...
+		adda coldirection,pcr	; ...
+		leax colsnake,pcr	; ...
+		incb			; ...
+		abx			; ...
+		sta ,x			; ...
+
+		inc headpos,pcr		; move the head to the next position
+		rts			; will wrap 255->0
+
+
 
 testcollide:	leax rowsnake,pcr
 		abx
@@ -170,29 +183,29 @@ moveupdown:	clr coldirection,pcr
 		sta rowdirection,pcr
 		bra controlsnakeo
 
-initrandom:	lda uptimel+1
+randominit:	lda uptimel+1
 		sta randomseed
 		rts
 
 randomnumber:	lda randomseed
 		beq doeor
 		asla
-		beq noeor		; if the input was $80, skip the EOR
+		beq noeor		; if the input was $80, skip the eor
 		bcc noeor
 doeor:		eora #0x1d
 noeor:		sta randomseed
 
 		rts
 
-rowsnake:	.rmb 256
-colsnake:	.rmb 256
-headpos:	.rmb 1
-snakelength:	.rmb 1
+rowsnake:	.rmb 256		; circular array for snake position
+colsnake:	.rmb 256		; for rows and columns
+headpos:	.rmb 1			; offset into arrays where head is
+snakelength:	.rmb 1			; the length of the sanke
 
-rowdirection:	.rmb 1
-coldirection:	.rmb 1
+rowdirection:	.rmb 1			; either -1, 0 or 1 for row dir
+coldirection:	.rmb 1			; either -1, 0 or 1 for col dir
 
-randomseed:	.rmb 1
+randomseed:	.rmb 1			; seed, and last random made
 
 		.include 'graphics.asm'
 		.include 'video.asm'
