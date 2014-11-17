@@ -1217,3 +1217,49 @@ walltiles:
 		.byte 0b11100000
 		.byte 0b11100000
 		.byte 0b11100000
+
+colours:
+
+; Speccy font tiles
+
+		.byte 0x10
+		.byte 0x10
+		.byte 0x10
+		.byte 0x10
+
+		.byte 0x10
+		.byte 0x10
+		.byte 0x10
+		.byte 0x10
+
+		.byte 0x10
+		.byte 0x10
+		.byte 0x10
+		.byte 0x10
+
+		.byte 0x10
+		.byte 0x10
+		.byte 0x10
+		.byte 0x10
+
+; "Graphics"
+
+		.byte 0x30		; green snake
+		.byte 0x80		; red bad things
+		.byte 0x10		; border
+		.byte 0x30
+
+		.byte 0x30
+		.byte 0x30
+		.byte 0x30
+		.byte 0x30
+
+		.byte 0x30
+		.byte 0x30
+		.byte 0x30
+		.byte 0x30
+
+		.byte 0x30
+		.byte 0x30
+		.byte 0x30
+		.byte 0x30
