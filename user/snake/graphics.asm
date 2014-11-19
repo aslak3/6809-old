@@ -1126,6 +1126,17 @@ badtiles:
 		.byte 0b00111100
 		.byte 0b00011000
 
+; $89 - dead life
+
+		.byte 0b01000010
+		.byte 0b11100111
+		.byte 0b01111110
+		.byte 0b00111100
+		.byte 0b00111100
+		.byte 0b01111110
+		.byte 0b11100111
+		.byte 0b01000010
+
 ; wall stuff
 
 walltiles:

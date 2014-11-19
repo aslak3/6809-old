@@ -38,7 +38,7 @@ printattabn:	sty ,x++		; save the start of the row
 
 		leax badtiles,pcr
 		ldy #8*0x88
-		ldu #8*1		; 1 characters of font data
+		ldu #8*2		; 2 characters of font data
 		jsr jvwrite
 
 		leax walltiles,pcr
@@ -52,27 +52,22 @@ printattabn:	sty ,x++		; save the start of the row
 		ldu #0x20
 		jsr jvwrite
 
-		; draw the border around the edge
-		clra			; top left is 0, 0
-		clrb			; ..
-		pshu a,b		; push this on the u stack
-		lda #23			; bottom right is 23, 31
-		ldb #31			; ...
-		pshu a,b		; push this on
-		lbsr drawbox		; call the drawbox function
-		leau 4,u		; reset the stack
+		rts
 
-		; title message over the top border
-		lda #0			; top row
-		ldb #16-4		; roughly centered..
-		leax titlemessage,pcr	; get the location of the message
-		lbsr printstrat		; and print it
+; clear whole screen
 
+clearscreen:	ldy #0x0000
+		jsr jvseekcommon
+		jsr jvseekwrite
+		ldx #24*32
+clearscreenn:	clr VPORT0
+		leax -1,x
+		bne clearscreenn
 		rts
 
 titlemessage:	.asciz " SNAKE! "
 
-; Prints the string at x (until null) at row a, col b
+; prints the string at x (until null) at row a, col b
 
 printstrat:	leay printattab,pcr	; the row->vram addres table
 		lsla			; double the row; table of addresses
