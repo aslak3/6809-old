@@ -1,146 +1,142 @@
-		.include 'hardware.inc'
+		include 'hardware.inc'
 
-		.include 'ramvars.asm'
-
-		.area ROM (ABS)
+		section _main
 
 ; fast interrupt vector
 
-		.org 0xfff6
+		org $fff6
 
-		.word firqinterrupt
+		fdb firqinterrupt
 
 ; normal interrupt vector
 
-		.org 0xfff8
+		org $fff8
 
-		.word irqinterrupt
+		fdb irqinterrupt
 
 ; software interrupt vector
 
-		.org 0xfffa
+		org $fffa
 
-		.word moninterrupt
+		fdb moninterrupt
 
 ; non maskable interupt vector
 
-		.org 0xfffc
+		org $fffc
 
-		.word moninterrupt
+		fdb moninterrupt
 
 ; setup the reset vector, last location in rom
 
-		.org 0xfffe
+		org $fffe
 	
-		.word reset
+		fdb reset
 
 ; this is the start of rom
 
-		.org 0xc000
+		org $c000
 
 ; at the start of rom is the jump table for external (ram) programs to use
 ; to call into the rom
 
-		.include 'jumptable.asm'
-
 ; START OF GLOBAL READ-ONLY DATA
 
-greetingmsg:	.asciz '\r\n6809 Monitor v0.4\r\n\r\n'
-youtypedmsg:	.asciz 'You typed: '
-promptmsg:	.asciz 'Monitor: > '
-nosuchmsg:	.asciz 'No such command\r\n'
-commfailedmsg:	.asciz 'Command failed, possibly bad syntax\r\n'
-breakatmsg:	.asciz '***Break at '
-badexitmsg:	.asciz 'Internal error; leaving monitor\r\n'
-flashreadymsg:	.asciz '+++'
-resetmsg:	.asciz '\r\n***flash with f or any other key to start\r\n'
-newlinemsg:	.asciz '\r\n'
+greetingmsg:	fcn '\r\n6809 Monitor v0.4\r\n\r\n'
+youtypedmsg:	fcn 'You typed: '
+promptmsg:	fcn 'Monitor: > '
+nosuchmsg:	fcn 'No such command\r\n'
+commfailedmsg:	fcn 'Command failed, possibly bad syntax\r\n'
+breakatmsg:	fcn '***Break at '
+badexitmsg:	fcn 'Internal error; leaving monitor\r\n'
+flashreadymsg:	fcn '+++'
+resetmsg:	fcn '\r\n***flash with f or any other key to start\r\n'
+newlinemsg:	fcn '\r\n'
 
 ; commandarray - subroutine address followed by command letter code
 
-commandarray:	.word dumpmemory
-		.ascii 'd'
-		.word writememory
-		.ascii 'w'
-		.word exitmonitor
-		.ascii 'e'
-		.word showregisters
-		.ascii 'r'
-		.word showhelp
-		.ascii 'h'
-		.word showhelp
-		.ascii '?'			; same command different letter
-		.word resetmonitor
-		.ascii 'q'
-		.word showuptime
-		.ascii 'u'
-		.word resetuptime
-		.ascii 'U'
-		.word latchout
-		.ascii 'c'
-		.word latchin
-		.ascii 'C'
-		.word spistore
-		.ascii '+'
-		.word ideidentify
-		.ascii 'y'
-		.word idereadsector
-		.ascii '<'
-		.word idewritesector
-		.ascii '>'
-		.word readblk
-		.ascii '{'
-		.word fsmount
-		.ascii 'm'
-		.word readinode
-		.ascii 'i'
-		.word readbyinode
-		.ascii 'f'
-		.word listdirbyinode
-		.ascii 'l'
-		.word playay
-		.ascii 'p'
-		.word xmodem
-		.ascii 'x'
-		.word disassemble
-		.ascii 's'
-		.word parsetest
-		.ascii 'z'
-		.word setbank
-		.ascii 'b'
-		.word getbank
-		.ascii 'B'
-		.word readbyte
-		.ascii 'R'
-		.word testvramread
-		.ascii 'L'
-		.word testvramwrite
-		.ascii 'S'
-		.word terminit
-		.ascii 'Y'
-		.word tclearscreen
-		.ascii 'V'
-		.word testreg
-		.ascii 'K'
-		.word showstick
-		.ascii 'j'
-		.word 0x0000
-		.byte NULL
+commandarray:	fdb dumpmemory
+		fcc 'd'
+		fdb writememory
+		fcc 'w'
+		fdb exitmonitor
+		fcc 'e'
+		fdb showregisters
+		fcc 'r'
+		fdb showhelp
+		fcc 'h'
+		fdb showhelp
+		fcc '?'			; same command different letter
+		fdb resetmonitor
+		fcc 'q'
+		fdb showuptime
+		fcc 'u'
+		fdb resetuptime
+		fcc 'U'
+		fdb latchout
+		fcc 'c'
+		fdb latchin
+		fcc 'C'
+		fdb spistore
+		fcc '+'
+		fdb ideidentify
+		fcc 'y'
+		fdb idereadsector
+		fcc '<'
+		fdb idewritesector
+		fcc '>'
+		fdb readblk
+		fcc '{'
+		fdb fsmount
+		fcc 'm'
+		fdb readinode
+		fcc 'i'
+		fdb readbyinode
+		fcc 'f'
+		fdb listdirbyinode
+		fcc 'l'
+		fdb playay
+		fcc 'p'
+		fdb xmodem
+		fcc 'x'
+		fdb disassemble
+		fcc 's'
+		fdb parsetest
+		fcc 'z'
+		fdb setbank
+		fcc 'b'
+		fdb getbank
+		fcc 'B'
+		fdb readbyte
+		fcc 'R'
+		fdb testvramread
+		fcc 'L'
+		fdb testvramwrite
+		fcc 'S'
+		fdb terminit
+		fcc 'Y'
+		fdb tclearscreen
+		fcc 'V'
+		fdb testreg
+		fcc 'K'
+		fdb showstick
+		fcc 'j'
+		fdb $0000
+		fcb NULL
 
-bootbeeps:	.asciz 'abcdefg'
+bootbeeps:	fcn 'abcdefg'
 
 ; END OF DATA
 
 ; setup stack to the end of ram so it can go grown backwards
 
-memerror:	lda #0x80
+memerror:	lda #$80
 		sta SOUNDER		; change tone
 memerrorloop:	bra memerrorloop		
 
-reset:		lda #0x10
+reset:		lda #$10
 		sta SOUNDER
 
-		lda #0x04
+		lda #$04
 
 nextbank:	deca
 		sta BANKLATCH
@@ -156,7 +152,7 @@ nextbyte:	clr ,x
 		tsta
 		bne nextbank
 
-		lda #0x01
+		lda #$01
 		sta BANKLATCH
 
 		lds #STACKEND+1		; setup hardware stack
@@ -182,9 +178,9 @@ init:		clr IRQFILTER		; clear interrupt regs
 
 		bne normalstart		; timeout
 
-		cmpa #0x66		; 'f'
+		cmpa #$66		; 'f'
 		beq flashing
-		cmpa #0x20		; space
+		cmpa #$20		; space
 		beq noscreen
 		bra normalstart
 
@@ -208,20 +204,20 @@ noscreen:	ldx #greetingmsg	; greetings!
 		ldx #bootbeeps
 		lbsr ay8910playtune	; play booting beeps
 
-		lda #0x20		; beep frequency
+		lda #$20		; beep frequency
 		sta SOUNDER		; set the beeper beeping
-		ldy #0xd000		; small delay
+		ldy #$d000		; small delay
 		lbsr delay
 
-		lda #0x10		; higher pitched noise
+		lda #$10		; higher pitched noise
 		sta SOUNDER		; more beeps
-		ldy #0x7000		; shorter delay
+		ldy #$7000		; shorter delay
 		lbsr delay
 		
 		clr SOUNDER		; silence the beeper
 
 
-		enableinterrupts	; enable interrupts
+		enableinter		; enable interrupts
 
 		swi			; enter the monitor (mainloop)
 
@@ -256,7 +252,7 @@ keyhandlergo:	lbsr keyhandler
 
 ; monitor entry point
 
-moninterrupt:	enableinterrupts	; enable interrupts again
+moninterrupt:	enableinter		; enable interrupts again
 
 		ldx #outputbuffer	; setup the "break" message
 		ldy #breakatmsg		; ...
@@ -315,20 +311,20 @@ dumpmemory:	lbsr parseinput		; parse hexes, filling out inputbuffer
 		cmpa #2			; is it a word?
 		lbne generalerror	; validation error
 		ldd ,y++		; start address
-		andb #0xf0		; round to nearest 16
+		andb #$f0		; round to nearest 16
 		std dumppointer		; store it in the variable
 		lda ,y+			; get the type
 		cmpa #2			; is it a word?
 		bne generalerror	; yes, mark it as bad
 		ldd ,y++		; length/count of bytes
-		andb #0xf0		; also rounded
+		andb #$f0		; also rounded
 		std dumpcounter		; store it in the variable
 
 dumpnextrow:	ldx #outputbuffer	; x is persistent across the whole row
 
 		ldd dumppointer		; get address of this row
 		lbsr wordtoaschex	; print the address into the buffer
-		lda #0x20		; space
+		lda #$20		; space
 		sta ,x+			; add a space after the address
 		sta ,x+			; and another
 
@@ -337,21 +333,21 @@ dumpnextrow:	ldx #outputbuffer	; x is persistent across the whole row
 		ldy dumppointer	; points at the start of the row
 		ldb #0			; counts across 16 bytes
 
-hexbyteloop:	cmpb #0x08		; for pretty ness...
+hexbyteloop:	cmpb #$08		; for pretty ness...
 		bne noextraspace	; add a space after 8 bytes
-		lda #0x20		; space
+		lda #$20		; space
 		sta ,x+			; push it in
 noextraspace:	lda b,y			; actually read the byte from memory
 		lbsr bytetoaschex	; convert it to ascii
-		lda #0x20		; space
+		lda #$20		; space
 		sta ,x+			; add a space between each byte
 		incb			; incrememnt offset
-		cmpb #0x10		; 16 bytes per row
+		cmpb #$10		; 16 bytes per row
 		bne hexbyteloop		; and do the next byte
 
-		lda #0x20		; spaces
+		lda #$20		; spaces
 		sta ,x+			; add it in
-		lda #0x5b		; opening [
+		lda #$5b		; opening [
 		sta ,x+			; add it in
 
 ; ascii version
@@ -363,10 +359,10 @@ ascbyteloop:	lda b,y			; get the byte from memory
 		lbsr printableasc	; nonprintable to a dot
 		sta ,x+			; add it in
 		incb			; increment offset
-		cmpb #0x10		; 16 bytes per row
+		cmpb #$10		; 16 bytes per row
 		bne ascbyteloop		; and do the next byte
 
-		lda #0x5d		; closing ]
+		lda #$5d		; closing ]
 		sta ,x+			; add it in
 
 		clr ,x+			; null terminator
@@ -380,10 +376,10 @@ ascbyteloop:	lda b,y			; get the byte from memory
 ; move onto the the next row
 
 		ldx dumppointer		; load the pointer back in
-		leax 0x10,x		; add 0x10
+		leax $10,x		; add $10
 		stx dumppointer		; store it back
 		ldx dumpcounter		; loead the remaning byte counter
-		leax -0x10,x		; subtract 0x10
+		leax -$10,x		; subtract $10
 		stx dumpcounter		; store it back
 
 		bne dumpnextrow		; more rows?
@@ -411,7 +407,7 @@ writebyte:	ldb ,y+			; get the byte to write
 		stb ,x+			; and load it at memory x
 		bra nextwrite		; back for more
 writeword:	ldd ,y++		; get the word to write
-		std, x++		; and load it
+		std ,x++		; and load it
 		bra nextwrite		; back for more
 writestring:	lbsr concatstr		; use the concatstr operation
 		bra nextwrite		; ...it copies y->x
@@ -434,14 +430,14 @@ cleanexit:	rti			; run the usercode at that address
 
 ; shows the registers as they were when the monitor was entered
 
-ccmsg:		.asciz 'CC: '
-amsg:		.asciz '  A: '
-bmsg:		.asciz '  B: '
-dpmsg:		.asciz '  DP: '
-xmsg:		.asciz '  X: '
-ymsg:		.asciz '  Y: '
-umsg:		.asciz '  U: '
-pcmsg:		.asciz '  PC: '
+ccmsg:		fcn 'CC: '
+amsg:		fcn '  A: '
+bmsg:		fcn '  B: '
+dpmsg:		fcn '  DP: '
+xmsg:		fcn '  X: '
+ymsg:		fcn '  Y: '
+umsg:		fcn '  U: '
+pcmsg:		fcn '  PC: '
 
 showregisters:	ldx #outputbuffer	; set output buffer
 		ldu spatentry
@@ -497,31 +493,31 @@ showregisters:	ldx #outputbuffer	; set output buffer
 
 ; shows some help text
 
-helpmsg:	.ascii 'Commands:\r\n'
-		.ascii '  r : show registers\r\n'
-		.ascii '  w AAAA BB WWWW "STRING" ... : write to AAAA bytes, words, strings\r\n'
-		.ascii '  d AAAA LLLL : dump from AAAA count LLLL bytes in hex\r\n'
-		.ascii '  e EEEE : exit to user code at EEEE\r\n'
-		.ascii '  q : reset the monitor\r\n'
-		.ascii '  + SSSS WWWW RRRR : from address SSSS write WWWW spi bytes then read\r\n'
-		.ascii '    RRRR bytes\r\n'
-		.ascii '  u : show uptime\r\n'
-		.ascii '  U : clear uptime counter\r\n'
-		.ascii '  c OO : output OO on the latch\r\n'
-		.ascii '  m : set 8bit ide and read mbr\r\n'
-		.ascii '  y : send ide identify command and show basic info\r\n'
-		.ascii '  { MMMM NNNN : read 1k disk block NNNN into MMMM\r\n'
-		.ascii '  < L0 L1 NN MMMM : read NN sectors from L0 L1 into MMMM\r\n'
-		.ascii '  > L0 L1 NN MMMM : write NN sectors from L0 L1 from MMMM\r\n'
-		.ascii '  l IIII : list directory at inode IIII\r\n'
-		.ascii '  i IIII ; show info about inode IIII\r\n'
-		.ascii '  f MMMM IIII : read file(etc) at inode IIII into MMMM\r\n'
-		.ascii '  x MMMM : receive file over XMODEM starting at MMMM\r\n'
-		.ascii '  p MMMM or p "STRING" : play notes at MMMM or STRING\r\n'
-		.ascii '  b BB : set the memory bank to BB\r\n'
-		.ascii '  B : show the current memory bank\r\n'
-		.ascii '  h or ? : this help\r\n'
-		.asciz '\r\n'
+helpmsg:	fcc 'Commands:\r\n'
+		fcc '  r : show registers\r\n'
+		fcc '  w AAAA BB WWWW "STRING" ... : write to AAAA bytes, words, strings\r\n'
+		fcc '  d AAAA LLLL : dump from AAAA count LLLL bytes in hex\r\n'
+		fcc '  e EEEE : exit to user code at EEEE\r\n'
+		fcc '  q : reset the monitor\r\n'
+		fcc '  + SSSS WWWW RRRR : from address SSSS write WWWW spi bytes then read\r\n'
+		fcc '    RRRR bytes\r\n'
+		fcc '  u : show uptime\r\n'
+		fcc '  U : clear uptime counter\r\n'
+		fcc '  c OO : output OO on the latch\r\n'
+		fcc '  m : set 8bit ide and read mbr\r\n'
+		fcc '  y : send ide identify command and show basic info\r\n'
+		fcc '  { MMMM NNNN : read 1k disk block NNNN into MMMM\r\n'
+		fcc '  < L0 L1 NN MMMM : read NN sectors from L0 L1 into MMMM\r\n'
+		fcc '  > L0 L1 NN MMMM : write NN sectors from L0 L1 from MMMM\r\n'
+		fcc '  l IIII : list directory at inode IIII\r\n'
+		fcc '  i IIII ; show info about inode IIII\r\n'
+		fcc '  f MMMM IIII : read file(etc) at inode IIII into MMMM\r\n'
+		fcc '  x MMMM : receive file over XMODEM starting at MMMM\r\n'
+		fcc '  p MMMM or p "STRING" : play notes at MMMM or STRING\r\n'
+		fcc '  b BB : set the memory bank to BB\r\n'
+		fcc '  B : show the current memory bank\r\n'
+		fcc '  h or ? : this help\r\n'
+		fcn '\r\n'
 
 showhelp:	ldx #greetingmsg	; show the greeting
 		lbsr ioputstr	; for the version number
@@ -532,7 +528,7 @@ showhelp:	ldx #greetingmsg	; show the greeting
 
 ; restart the monitor (so we can flash it with 'f', most likely)
 
-resetmonitor:	jmp [0xfffe]		; reset via the reset vector
+resetmonitor:	jmp [$fffe]		; reset via the reset vector
 
 ; showuptime
 
@@ -591,12 +587,12 @@ spistore:	lbsr parseinput		; parse hexes, filling out inputbuffer
 		lbne generalerror	; validation error
 		ldu ,y++		; get the start of mpu memory
 
-		lda, y+			; get the type
+		lda ,y+			; get the type
 		cmpa #2			; word?
 		lbne generalerror	; validation error
 		ldx ,y++		; get the count of bytes to read
 
-		lda, y+			; get the type
+		lda ,y+			; get the type
 		cmpa #2			; word?
 		lbne generalerror	; validation error
 		ldy ,y			; get the count of bytes to read
@@ -613,11 +609,11 @@ spistorenext:	leax ,x			; early exit loop if no bytes to send
 		bra spistorenext	; back for more if there is more
 
 spistoredone:
-spiloadnext:	leay, y			; early exit loop if no bytes to recv
+spiloadnext:	leay ,y			; early exit loop if no bytes to recv
 		beq spiloaddone
 
 		lbsr spiread		; get the byte we have been sent
-		stb, u+			; store it in the buffer we have
+		stb ,u+			; store it in the buffer we have
 		
 		leay -1,y		; secrent the counter
 
@@ -630,11 +626,11 @@ spiloaddone:	lbsr spistop		; mark with stop
 
 ; ideidentify - print info about the device
 
-serialnomsg:	.asciz 'Serial number: '
-firmwarerevmsg:	.asciz 'Firmware revision: '
-modelnomsg:	.asciz 'Model number: '
+serialnomsg:	fcn 'Serial number: '
+firmwarerevmsg:	fcn 'Firmware revision: '
+modelnomsg:	fcn 'Model number: '
 
-ideidentify:	lda #0xec		; this is the identify command
+ideidentify:	lda #$ec		; this is the identify command
 		lbsr simpleidecomm	; send it
 
 		ldx #idescratchsec	; setup our read sector buffer
@@ -707,9 +703,9 @@ idereadsector:	lbsr parseinput
 		lda ,y+			; get the type
 		cmpa #2			; word?
 		lbne generalerror	; validation error
-		ldx, y++		; finally where to store the read
+		ldx ,y++		; finally where to store the read
 
-		lda #0x20		; this is read sector
+		lda #$20		; this is read sector
 		lbsr simpleidecomm	; send the command
 
 readsectorloop:	lbsr idellread		; read into x
@@ -748,9 +744,9 @@ idewritesector:	lbsr parseinput
 		lda ,y+			; get the type
 		cmpa #2			; word?
 		lbne generalerror	; validation error
-		ldx, y++		; finally where to read from
+		ldx ,y++		; finally where to read from
 
-		lda #0x30		; this is write sector
+		lda #$30		; this is write sector
 		lbsr simpleidecomm	; send the command
 
 writesectorloop:lbsr idellwrite		; write into x
@@ -782,13 +778,13 @@ readblk:	lbsr parseinput
 
 ; fsmount - m - calls idemount then prepares the fs
 
-magicmsg:	.asciz 'Magic is: '
-startinodemsg:	.asciz 'Start of inodes at block: '
+magicmsg:	fcn 'Magic is: '
+startinodemsg:	fcn 'Start of inodes at block: '
 
 fsmount:	lbsr idemount		; do the mbr read etc
 
 		ldx #scratchblk		; setup the super block pointer
-		ldy #0x0001		; it is at block 1 (2nd block)
+		ldy #$0001		; it is at block 1 (2nd block)
 
 		lbsr fsreadblk		; read it in
 
@@ -820,8 +816,8 @@ fsmount:	lbsr idemount		; do the mbr read etc
 
 		rts
 
-typemodemsg:	.asciz 'Type and Mode: '
-filesizemsg:	.asciz 'File size: '
+typemodemsg:	fcn 'Type and Mode: '
+filesizemsg:	fcn 'File size: '
 
 ; readinode - i IIII - reads inode IIII and prints some info about it
 
@@ -863,7 +859,7 @@ readbyinode:	lbsr parseinput
 
 		rts
 
-notdirmsg:	.asciz 'Not a directory at that inode\r\n'
+notdirmsg:	fcn 'Not a directory at that inode\r\n'
 
 listdirbyinode:	lbsr parseinput
 
@@ -929,7 +925,7 @@ blockloopnoget:	cmpa #EOT		; EOT for end of file
 
 		clr xmodemchecksum	; clear the checksum
 
-		ldb #0x80		; 128 bytes per block
+		ldb #$80		; 128 bytes per block
 byteloop:	lbsr serialgetchar	; get the byte for th efile
 		sta ,x+			; store the byte
 		adda xmodemchecksum	; add the received byte the checksum
@@ -949,7 +945,7 @@ byteloop:	lbsr serialgetchar	; get the byte for th efile
 blockbad:	lda #NAK		; oh no, it was bad
 		lbsr serialputchar	; send a NAK; sender resends block
 
-		leax -0x80,x		; move back to start of the block
+		leax -$80,x		; move back to start of the block
 		
 		bra blockloop		; try to get the same block again
 
@@ -978,9 +974,9 @@ disassemble:	lbsr parseinput		; parse hexes, filling out inputbuffer
 
 ; z BB WWWW "STRING" .... - test the parser by outputting what was parsed
 
-bytefoundmsg:	.asciz "byte: "
-wordfoundmsg:	.asciz "word: "
-stringfoundmsg:	.asciz "string: "
+bytefoundmsg:	fcn "byte: "
+wordfoundmsg:	fcn "word: "
+stringfoundmsg:	fcn "string: "
 
 parsetest:	lbsr parseinput
 
@@ -1174,7 +1170,7 @@ flashdelayloop:	leax -1,x		; dey
 ; tell the uploader that we have written the block, and it can send the
 ; next one
 
-		lda #0x23		; '#'
+		lda #$23		; '#'
 		lbsr ioputchar	; send the char
 		cmpu #ROMEND+1		; see if we are the end of rom
 		bne inflashblk		; back to the next block
@@ -1191,20 +1187,6 @@ verflash:	lda ,u+			; get the byte
 ; we could in theory try again but good or bad, do a reset on the new
 ; reset vector
 		
-		jmp [0xfffe]		; jump through the new reset vector
+		jmp [$fffe]		; jump through the new reset vector
 
-; include the various subsystem implementations
-
-		.include 'storage.asm'
-		.include 'spi.asm'
-		.include 'serial.asm'
-		.include 'strings.asm'
-		.include 'misc.asm'
-		.include 'ay8910.asm'
-		.include 'disassembly.asm'
-		.include 'font.asm'
-		.include 'v99.asm'
-		.include 'keyboard.asm'
-		.include 'timer.asm'
-		.include 'io.asm'
-		.include 'terminal.asm'
+		endsection

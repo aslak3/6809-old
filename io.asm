@@ -1,3 +1,5 @@
+		section _main
+
 ;;; IO ;;;
 
 ; put the char in a
@@ -76,3 +78,5 @@ ioputlab:	lbsr ioputstr		; outputs whats in x (hope no newline)
 		rts
 
 ionull:		rts
+
+		endsection

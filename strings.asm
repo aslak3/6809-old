@@ -1,15 +1,17 @@
+		section _main
+
 ;;; STRINGS ;;;
 
 ; aschextonib - convert a char on x to a low nibble in a
 
 aschextonib:	lda ,x+			; get the charater
-		suba #0x30		; subtract '0'
-		cmpa #0x10		; less then 9?
+		suba #$30		; subtract '0'
+		cmpa #$10		; less then 9?
 		blo aschextonibout	; yes? we are done
-		suba #0x07		; no? subtract 'A'-'9'
-		cmpa #0x10		; less then 16?
+		suba #$07		; no? subtract 'A'-'9'
+		cmpa #$10		; less then 16?
 		blo aschextonibout	; was uppercase
-		suba #0x20
+		suba #$20
 aschextonibout:	rts
 
 ; aschextobyte - convert two characters on x to a byte in a
@@ -42,15 +44,15 @@ nextparseinput:	lda ,x			; check for an initiial null
 		beq parseinputout	; null? out we go
 		bsr skipspaces		; skip spaces
 		lda ,x			; get the char under the new pos
-		cmpa #0x22		; double quote
+		cmpa #$22		; double quote
 		beq parsestring		; if so it is a string
 		lda 2,x			; get the next but one char
 		beq parsebyte		; null? it's a byte
-		cmpa #0x20		; space
+		cmpa #$20		; space
 		beq parsebyte		; yes? it's a byte
 		lda 4,x			; get the next but 3 char
 		beq parseword		; null? it's a word
-		cmpa #0x20		; space
+		cmpa #$20		; space
 		beq parseword		; yes? it's a word
 		bra parseinputout	; no match, so end
 parsebyte:	lda #1			; code 1 for bytes
@@ -68,7 +70,7 @@ parsestring:	lda #3			; type 3 for strings
 		leax 1,x		; move to after the quote
 stringloop:	lda ,x+			; get the string data
 		beq parsestringout	; end of the string (bad though)
-		cmpa #0x22		; closing quote
+		cmpa #$22		; closing quote
 		beq parsestringout	; yes? end of the string
 		sta ,y+			; add it in
 		bne stringloop		; check for nulls too
@@ -80,11 +82,11 @@ parseinputout:	clr ,y+			; null ender
 
 ; nibtoaschex - convert a low nibble in a to a character in x, advancing it
 
-nibtoaschex:	anda #0x0f		; mask out the high nibble
-		adda #0x30		; add '0'
-		cmpa #0x39		; see if we are past '9'
+nibtoaschex:	anda #$0f		; mask out the high nibble
+		adda #$30		; add '0'
+		cmpa #$39		; see if we are past '9'
 		ble nibtoaschexout	; no? number then, so we're done
-		adda #0x07		; yes? letter then, add 'A'-'9'
+		adda #$07		; yes? letter then, add 'A'-'9'
 nibtoaschexout:	sta ,x+			; add it to the string
 		rts		
 
@@ -111,19 +113,19 @@ wordtoaschex:	pshs b			; save low byte
 ; jump x across spaces
 
 skipspaces:	lda ,x+			; skip a space
-		cmpa #0x20		; is it a space?
+		cmpa #$20		; is it a space?
 		beq skipspaces		; yes? then go back and look for more
 		leax -1,x		; back 1
 		rts
 
 ; printableasc - converts non printables to . in a
 
-printableasc:	cmpa #0x20		; compare with space
+printableasc:	cmpa #$20		; compare with space
 		blo printabletodot	; lower? it must be a unprintable
-		cmpa #0x7e		; compare with the end char
+		cmpa #$7e		; compare with the end char
 		bhi printabletodot	; higher? it must be unprintable
 		rts			; if not, leave it alone
-printabletodot:	lda #0x2e		; otherwise flatten it to a dot
+printabletodot:	lda #$2e		; otherwise flatten it to a dot
 		rts
 
 ; concatstr - add string y to string x, not copying the null
@@ -142,3 +144,5 @@ concatstrn:	ldb ,y+
 		beq concatstrnout
 		bra concatstrn
 concatstrnout:	rts
+
+		endsection

@@ -1,8 +1,10 @@
+		section _main
+
 ;;; IDE
 
 ; run the trivial command in 'a', assuming other params are setup
 
-simpleidecomm:	ldb #0b11100000
+simpleidecomm:	ldb #%11100000
 		stb IDEHEADS
 		sta IDECOMMAND
 		clra
@@ -137,7 +139,7 @@ fsreadinode:	pshs x,y,d
 
 		clra
 		puls b			; get original (low byte) inode back
-		andb #0b00011111	; mask off the inode position in block
+		andb #%00011111	; mask off the inode position in block
 		lbsr mul32		; d now has byte offset start of inode
 		leay d,y
 		ldb #0x20		; copy 20 bytes
@@ -270,3 +272,5 @@ skipdir:	leau 30,u
 		bne nextdirent
 		puls d,x,y,u
 		rts
+
+		endsection

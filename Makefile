@@ -5,32 +5,26 @@ PROG_SERIAL = /dev/ttyUSB1
 6809_SERIAL = /dev/ttyUSB0
 
 BIN = monitor.bin
-MAP = monitor.map
-INC = monitor.inc
 
-MONITOR_ASM = monitor.asm
-ASMS = jumptable.asm misc.asm ramvars.asm storage.asm spi.asm serial.asm \
+ASMS = monitor.asm jumptable.asm misc.asm ramvars.asm storage.asm spi.asm serial.asm \
 	strings.asm ay8910.asm disassembly.asm font.asm v99.asm keyboard.asm \
-	timer.asm io.asm terminal.asm
+	timer.asm io.asm terminal.asm ramvars.asm
+OBJS = monitor.o jumptable.o misc.o ramvars.o storage.o spi.o serial.o \
+	strings.o ay8910.o disassembly.o font.o v99.o keyboard.o \
+	timer.o io.o terminal.o ramvars.o
 
 INCS = hardware.inc
 
-all: $(BIN) $(INC)
+all: $(BIN)
 
-%.bin: %.ihx
-	hex2bin -out $@ $<
+$(BIN): $(OBJS)
+	lwlink --raw --output=$@ $(OBJS)
 
-%.ihx: %.rel
-	aslink -nmwi $<
-	
-%.rel: $(ASMS) $(INCS) $(MONITOR_ASM)
-	as6809 -oxs $(MONITOR_ASM)
-
-$(INC): $(MAP)
-	./map2inc.pl < $(MAP) > $(INC)
+%.o: %.asm
+	lwasm --obj --output=$@ --6809 --pragma=undefextern --pragma=export $<
 
 clean:
-	rm -f $(BIN) $(INC) *.rel *.ihx *.map *.sym
+	rm -f $(BIN) $(INC) *.rel *.ihx *.map *.sym *.o
 
 doupload:
 	$(UPLOAD) -f $(BIN) -s $(PROG_SERIAL)

@@ -1,23 +1,27 @@
+		include 'v99.inc'
+
+		section _main
+
 ; local terminal stuff
 
-twocolpalette:	.byte 0x00, 0x00, 0x00  ; black background
-		.byte 0x07, 0x07, 0x07  ; white text
+twocolpalette:	fcb $00,$00,$00  ; black background
+		fcb $07,$07,$07  ; white text
 
 terminit:	lbsr vinit
 
-		loadconstreg VMODE0REG, 0b00000100
-		loadconstreg VMODE1REG, 0b01010000
-		loadconstreg VMODE2REG, 0b00001000
-		loadconstreg VMODE3REG, 0b00000010
+		loadconstreg VMODE0REG,%00000100
+		loadconstreg VMODE1REG,%01010000
+		loadconstreg VMODE2REG,%00001000
+		loadconstreg VMODE3REG,%00000010
 
-		loadconstreg VPATTBASEREG, 0x00	; bottom half - patterns
-		loadconstreg VVIDBASEREG, 0x23	; top half - video
+		loadconstreg VPATTBASEREG,$00	; bottom half - patterns
+		loadconstreg VVIDBASEREG,$23	; top half - video
 
 		ldx #twocolpalette	; set the colour reg pointer
 		ldy #2			; 2 colours
 		lbsr vsetcolours
 
-		loadconstreg VCOLOUR1REG, 0x10
+		loadconstreg VCOLOUR1REG,$10
 
 		lbsr vclearvram
 
@@ -28,7 +32,7 @@ terminit:	lbsr vinit
 
 		lda #24
 		ldx #tlinestarts
-		ldy #0x8000
+		ldy #$8000
 linecalcnext:	sty ,x++
 		leay 80,y
 		deca
@@ -47,16 +51,16 @@ linecalcnext:	sty ,x++
 
 		; via handshaking etc
 
-		lda #0x08
+		lda #$08
 		sta PCR6522
-		lda #0x82
+		lda #$82
  		sta IER6522
 
 		rts
 
 tclearscreen:	clr trow
 		clr tcol
-		ldy #0x8000
+		ldy #$8000
 		lbsr vseekcommon
 		lbsr vseekwrite
 		ldx 80*24
@@ -139,7 +143,7 @@ tblankcurrent:	lbsr tmovecursor
 		rts
 
 tscroller:	ldb #23
-		ldy #0x8000+80
+		ldy #$8000+80
 tscrollernext:	pshs b
 		ldx #tscrollline
 		ldu #80
@@ -174,7 +178,7 @@ keyfound:	pshs b,x
 		ldx #keybuffer
 		lda b,x
 		incb
-		andb #0x3f
+		andb #$3f
 		stb keyreadpointer
 		puls b,x
 		rts
@@ -188,4 +192,6 @@ tactive:	ldx #tgetchar
 		ldx #ionull
 		stx iogetwto
 		rts
+
+		endsection
 		

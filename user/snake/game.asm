@@ -6,7 +6,6 @@ game:		lbsr randominit		; prepare the pseudo random numbers
 
 		lda #2			; start at length of two
 		sta snakelength,pcr	; save the length
-		clr headpos,pcr		; snake snarts at the top of table
 
 life:		lbsr clearscreen	; back to empty screen
 		lbsr drawplayarea	; draw the border
@@ -24,6 +23,8 @@ rowinitloop:	sta ,x+			; save the same row along the table
 colinitloop:	sta ,x+			; save the smae col along the table
 		decb			; 256 bytes
 		bne colinitloop		; back for more
+
+		clr headpos,pcr		; snake snarts at the top of table
 
 		clr rowdirection,pcr	; snake moves...
 		lda #1			; across to the right...

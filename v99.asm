@@ -1,13 +1,15 @@
+		section _main
+
 ; v9938 (and 58) - low level routines
 
 ; stores whats in a in the constant register, register
 
-		.include 'v99.inc'
+		include 'v99.inc'
 
 ; save into the registers, starting from the register in a. the values
 ; pointed by x and counted by y are copied in
 
-vindirect:	ora #0x80		; auto incmreneting mode
+vindirect:	ora #$80		; auto incmreneting mode
 		loadareg VINDIRECTREG	; set up the indirect reg
 vindirectnext:	lda ,x+			; get the value
 		sta VINDIRECTPORT	; save it in the register
@@ -43,19 +45,19 @@ vsetcoloursn:	bsr vsetcolour		; sets this colour
 
 ; sets up "core" registers
 
-vinit:		loadconstreg VBANKREG, 0x00
-		loadconstreg VDISPLAYPOSREG, 0x0e
-		loadconstreg VDISPLAYOFFREG, 0x00
-		loadconstreg VINTLINEREG, 0x00
+vinit:		loadconstreg VBANKREG,$00
+		loadconstreg VDISPLAYPOSREG,$0e
+		loadconstreg VDISPLAYOFFREG,$00
+		loadconstreg VINTLINEREG,$00
 
 		lbsr vclearvram
 
 		rts
 
-vclearvram:	ldy #0x0000
+vclearvram:	ldy #$0000
 		lbsr vseekcommon
 		lbsr vseekwrite
-		ldx #0x0000
+		ldx #$0000
 		clra
 vclearnext:	sta VPORT0
 		leax -1,x
@@ -100,10 +102,10 @@ vseekcommon:	tfr y,d
 		loadareg VADDRREG
 		tfr y,d			; retore original address
 		stb VADDRPORT		; the low 8 bits of address (easy)
-		anda #0b00111111	; mask out the high two bits
+		anda #%00111111	; mask out the high two bits
 		rts
 
-vseekwrite:	ora #0b01000000		; set writing mode
+vseekwrite:	ora #%01000000		; set writing mode
 		sta VADDRPORT
 		sleep
 		rts
@@ -111,3 +113,5 @@ vseekwrite:	ora #0b01000000		; set writing mode
 vseekread:	sta VADDRPORT
 		sleep
 		rts
+
+		endsection

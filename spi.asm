@@ -1,10 +1,14 @@
+		include 'hardware.inc'
+
+		section _main
+
 ;;; SPI
 
-spiinit:	lda #0x01		; CPOL=0 and CPHA=1, which is
+spiinit:	lda #$01		; CPOL=0 and CPHA=1, which is
 		sta SPICONTROL		; needed by the DS1305
-		lda #0x02		; div=2, which is E by 4
+		lda #$02		; div=2, which is E by 4
 		sta SPIDIV
-		lda #0xff		; "disable" the SS outputs
+		lda #$ff		; "disable" the SS outputs
 		sta SPISS
 		rts
 
@@ -14,7 +18,7 @@ spistart:	sta SPISS
 		nop
 		rts
 
-spistop:	lda #0xff		; deassert chip select
+spistop:	lda #$ff		; deassert chip select
 		sta SPISS
 		nop
 		rts
@@ -67,3 +71,4 @@ readblockloop:	tst SPISTATUS
 
 		rts
 
+		endsection

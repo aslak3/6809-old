@@ -1,452 +1,454 @@
+		section _main
+
 ;;; DISASSEMBLER
 
 ;;; Big old mnemonic table
 
-abxn:		.asciz 'ABX'
-adcan:		.asciz 'ADCA'
-adcbn:		.asciz 'ADCB'
-addan:		.asciz 'ADDA'
-addbn:		.asciz 'ADDB'
-adddn:		.asciz 'ADDD'
-andan:		.asciz 'ANDA'
-andbn:		.asciz 'ANDB'
-andccn:		.asciz 'ANDCC'
-asrn:		.asciz 'ASR'
-asran:		.asciz 'ASRA'
-asrbn:		.asciz 'ASRB'
-beqn:		.asciz 'BEQ'
-bgen:		.asciz 'BGE'
-bgtn:		.asciz 'BGT'
-bhin:		.asciz 'BHI'
-bhsn:		.asciz 'BHS'
-bitan:		.asciz 'BITA'
-bitbn:		.asciz 'BITB'
-blen:		.asciz 'BLE'
-blon:		.asciz 'BLO'
-blsn:		.asciz 'BLS'
-bltn:		.asciz 'BLT'
-bmin:		.asciz 'BMI'
-bnen:		.asciz 'BNE'
-bpln:		.asciz 'BPL'
-bran:		.asciz 'BRA'
-brnn:		.asciz 'BRN'
-bsrn:		.asciz 'BSR'
-bvcn:		.asciz 'BVC'
-bvsn:		.asciz 'BVS'
-clrn:		.asciz 'CLR'
-clran:		.asciz 'CLRA'
-clrbn:		.asciz 'CLRB'
-cmpan:		.asciz 'CMPA'
-cmpbn:		.asciz 'CMPB'
-cmpdn:		.asciz 'CMPD'
-cmpsn:		.asciz 'CMPS'
-cmpun:		.asciz 'CMPU'
-cmpxn:		.asciz 'CMPX'
-cmpyn:		.asciz 'CMPY'
-comn:		.asciz 'COM'
-coman:		.asciz 'COMA'
-combn:		.asciz 'COMB'
-cwain:		.asciz 'CWAI'
-daan:		.asciz 'DAA'
-decn:		.asciz 'DEC'
-decan:		.asciz 'DECA'
-decbn:		.asciz 'DECB'
-eoran:		.asciz 'EORA'
-eorbn:		.asciz 'EORB'
-exgn:		.asciz 'EXG'
-incn:		.asciz 'INC'
-incan:		.asciz 'INCA'
-incbn:		.asciz 'INCB'
-jmpn:		.asciz 'JMP'
-jsrn:		.asciz 'JSR'
-lbeqn:		.asciz 'LBEQ'
-lbgen:		.asciz 'LBGE'
-lbgtn:		.asciz 'LBGT'
-lbhin:		.asciz 'LBHI'
-lbhsn:		.asciz 'LBHS'
-lblen:		.asciz 'LBLE'
-lblon:		.asciz 'LBLO'
-lblsn:		.asciz 'LBLS'
-lbltn:		.asciz 'LBLT'
-lbmin:		.asciz 'LBMI'
-lbnen:		.asciz 'LBNE'
-lbpln:		.asciz 'LBPL'
-lbran:		.asciz 'LBRA'
-lbrnn:		.asciz 'LBRN'
-lbsrn:		.asciz 'LBSR'
-lbvcn:		.asciz 'LBVC'
-lbvsn:		.asciz 'LBVS'
-ldan:		.asciz 'LDA'
-ldbn:		.asciz 'LDB'
-lddn:		.asciz 'LDD'
-ldsn:		.asciz 'LDS'
-ldun:		.asciz 'LDU'
-ldxn:		.asciz 'LDX'
-ldyn:		.asciz 'LDY'
-leasn:		.asciz 'LEAS'
-leaun:		.asciz 'LEAU'
-leaxn:		.asciz 'LEAX'
-leayn:		.asciz 'LEAY'
-lslan:		.asciz 'LSLA'
-lsln:		.asciz 'LSL'
-lslbn:		.asciz 'LSLB'
-lsrn:		.asciz 'LSR'
-lsran:		.asciz 'LSRA'
-lsrbn:		.asciz 'LSRB'
-muln:		.asciz 'MUL'
-negn:		.asciz 'NEG'
-negan:		.asciz 'NEGA'
-negbn:		.asciz 'NEGB'
-nopn:		.asciz 'NOP'
-oran:		.asciz 'ORA'
-orbn:		.asciz 'ORB'
-orccn:		.asciz 'ORCC'
-pshsn:		.asciz 'PSHS'
-pshun:		.asciz 'PSHU'
-pulsn:		.asciz 'PULS'
-pulun:		.asciz 'PULU'
-roln:		.asciz 'ROL'
-rolan:		.asciz 'ROLA'
-rolbn:		.asciz 'ROLB'
-rorn:		.asciz 'ROR'
-roran:		.asciz 'RORA'
-rorbn:		.asciz 'RORB'
-rtin:		.asciz 'RTI'
-rtsn:		.asciz 'RTS'
-sbcan:		.asciz 'SBCA'
-sbcbn:		.asciz 'SBCB'
-sexn:		.asciz 'SEX'
-stan:		.asciz 'STA'
-stbn:		.asciz 'STB'
-stdn:		.asciz 'STD'
-stsn:		.asciz 'STS'
-stun:		.asciz 'STU'
-stxn:		.asciz 'STX'
-styn:		.asciz 'STY'
-suban:		.asciz 'SUBA'
-subbn:		.asciz 'SUBB'
-subdn:		.asciz 'SUBD'
-swin:		.asciz 'SWI'
-swi2n:		.asciz 'SWI2'
-swi3n:		.asciz 'SWI3'
-syncn:		.asciz 'SYNC'
-tfrn:		.asciz 'TFR'
-tstn:		.asciz 'TST'
-tstan:		.asciz 'TSTA'
-tstbn:		.asciz 'TSTB'
+abxn:		fcn 'ABX'
+adcan:		fcn 'ADCA'
+adcbn:		fcn 'ADCB'
+addan:		fcn 'ADDA'
+addbn:		fcn 'ADDB'
+adddn:		fcn 'ADDD'
+andan:		fcn 'ANDA'
+andbn:		fcn 'ANDB'
+andccn:		fcn 'ANDCC'
+asrn:		fcn 'ASR'
+asran:		fcn 'ASRA'
+asrbn:		fcn 'ASRB'
+beqn:		fcn 'BEQ'
+bgen:		fcn 'BGE'
+bgtn:		fcn 'BGT'
+bhin:		fcn 'BHI'
+bhsn:		fcn 'BHS'
+bitan:		fcn 'BITA'
+bitbn:		fcn 'BITB'
+blen:		fcn 'BLE'
+blon:		fcn 'BLO'
+blsn:		fcn 'BLS'
+bltn:		fcn 'BLT'
+bmin:		fcn 'BMI'
+bnen:		fcn 'BNE'
+bpln:		fcn 'BPL'
+bran:		fcn 'BRA'
+brnn:		fcn 'BRN'
+bsrn:		fcn 'BSR'
+bvcn:		fcn 'BVC'
+bvsn:		fcn 'BVS'
+clrn:		fcn 'CLR'
+clran:		fcn 'CLRA'
+clrbn:		fcn 'CLRB'
+cmpan:		fcn 'CMPA'
+cmpbn:		fcn 'CMPB'
+cmpdn:		fcn 'CMPD'
+cmpsn:		fcn 'CMPS'
+cmpun:		fcn 'CMPU'
+cmpxn:		fcn 'CMPX'
+cmpyn:		fcn 'CMPY'
+comn:		fcn 'COM'
+coman:		fcn 'COMA'
+combn:		fcn 'COMB'
+cwain:		fcn 'CWAI'
+daan:		fcn 'DAA'
+decn:		fcn 'DEC'
+decan:		fcn 'DECA'
+decbn:		fcn 'DECB'
+eoran:		fcn 'EORA'
+eorbn:		fcn 'EORB'
+exgn:		fcn 'EXG'
+incn:		fcn 'INC'
+incan:		fcn 'INCA'
+incbn:		fcn 'INCB'
+jmpn:		fcn 'JMP'
+jsrn:		fcn 'JSR'
+lbeqn:		fcn 'LBEQ'
+lbgen:		fcn 'LBGE'
+lbgtn:		fcn 'LBGT'
+lbhin:		fcn 'LBHI'
+lbhsn:		fcn 'LBHS'
+lblen:		fcn 'LBLE'
+lblon:		fcn 'LBLO'
+lblsn:		fcn 'LBLS'
+lbltn:		fcn 'LBLT'
+lbmin:		fcn 'LBMI'
+lbnen:		fcn 'LBNE'
+lbpln:		fcn 'LBPL'
+lbran:		fcn 'LBRA'
+lbrnn:		fcn 'LBRN'
+lbsrn:		fcn 'LBSR'
+lbvcn:		fcn 'LBVC'
+lbvsn:		fcn 'LBVS'
+ldan:		fcn 'LDA'
+ldbn:		fcn 'LDB'
+lddn:		fcn 'LDD'
+ldsn:		fcn 'LDS'
+ldun:		fcn 'LDU'
+ldxn:		fcn 'LDX'
+ldyn:		fcn 'LDY'
+leasn:		fcn 'LEAS'
+leaun:		fcn 'LEAU'
+leaxn:		fcn 'LEAX'
+leayn:		fcn 'LEAY'
+lslan:		fcn 'LSLA'
+lsln:		fcn 'LSL'
+lslbn:		fcn 'LSLB'
+lsrn:		fcn 'LSR'
+lsran:		fcn 'LSRA'
+lsrbn:		fcn 'LSRB'
+muln:		fcn 'MUL'
+negn:		fcn 'NEG'
+negan:		fcn 'NEGA'
+negbn:		fcn 'NEGB'
+nopn:		fcn 'NOP'
+oran:		fcn 'ORA'
+orbn:		fcn 'ORB'
+orccn:		fcn 'ORCC'
+pshsn:		fcn 'PSHS'
+pshun:		fcn 'PSHU'
+pulsn:		fcn 'PULS'
+pulun:		fcn 'PULU'
+roln:		fcn 'ROL'
+rolan:		fcn 'ROLA'
+rolbn:		fcn 'ROLB'
+rorn:		fcn 'ROR'
+roran:		fcn 'RORA'
+rorbn:		fcn 'RORB'
+rtin:		fcn 'RTI'
+rtsn:		fcn 'RTS'
+sbcan:		fcn 'SBCA'
+sbcbn:		fcn 'SBCB'
+sexn:		fcn 'SEX'
+stan:		fcn 'STA'
+stbn:		fcn 'STB'
+stdn:		fcn 'STD'
+stsn:		fcn 'STS'
+stun:		fcn 'STU'
+stxn:		fcn 'STX'
+styn:		fcn 'STY'
+suban:		fcn 'SUBA'
+subbn:		fcn 'SUBB'
+subdn:		fcn 'SUBD'
+swin:		fcn 'SWI'
+swi2n:		fcn 'SWI2'
+swi3n:		fcn 'SWI3'
+syncn:		fcn 'SYNC'
+tfrn:		fcn 'TFR'
+tstn:		fcn 'TST'
+tstan:		fcn 'TSTA'
+tstbn:		fcn 'TSTB'
 
 ;;; Machine code instruction tables
 
 ; first struct is a page definition (default or page 10, 11 etc)
 
-.macro		pagedef opcode, page
-		.byte opcode
-		.word page
-.endm
+pagedef		macro NOEXPAND
+		fcb {1}
+		fdb {2}
+		endm
 
 ; second struct has no prefix and is just a list of any opcodes
 
-.macro		noprefix opcodetab, addrmodehandler
-		.word opcodetab		; opcode table
-		.word addrmodehandler	; post opcode bytes handler
-.endm
+noprefix	macro NOEXPAND
+		fdb {1}		; opcode table
+		fdb {2}		; post opcode bytes handler
+		endm
 
 ; third struct is one with a first nibble prefix filter
 
-.macro		prefix opcodeprefix, opcodetab, addrmodehandler
-		.byte opcodeprefix	; low nibble in opcode
-		.word opcodetab		; opcode table
-		.word addrmodehandler	; post opcode bytes handler
-.endm
+prefix		macro NOEXPAND
+		fcb {1}		; low nibble in opcode
+		fdb {2}		; opcode table
+		fdb {3}		; post opcode bytes handler
+		endm
 
 ; this is an actual opcodes: binary value to opcode string
 
-.macro		mc opcode, mn
-		.byte opcode		; opcode byte value (maybe masked)
-		.word mn		; opcode asciz string
-.endm
+mc		macro NOEXPAND
+		fcb {1}		; opcode byte value (maybe masked)
+		fdb {2}		; opcode asciz string
+		endm
 
 ; all the pages, mapping the first opcode byte to a page
 
-pagedefs:	pagedef 0x10, page10
-		pagedef 0x11, page11
-		pagedef 0x00, 0x00
+pagedefs:	pagedef $10,page10
+		pagedef $11,page11
+		pagedef $00,$00
 
 ; "pages" are collections of noprefix'ed and prefix'ed tables
 
-defaultpage:	.word noprefixtab, prefixtab
-page10:		.word p10noprefixtab, p10prefixtab
-page11:		.word p11noprefixtab, p11prefixtab
+defaultpage:	fdb noprefixtab,prefixtab
+page10:		fdb p10noprefixtab,p10prefixtab
+page11:		fdb p11noprefixtab,p11prefixtab
 
 ; these are the "randoms" which have no prefix block
 
-noprefixtab:	noprefix inherenttab, nullhandle
-		noprefix indexedtab, indexedhandle
-		noprefix immedtab, immedhandle
-		noprefix regimmedtab, regimmedhandle
-		noprefix stkimmedtab, stkimmedhandle
-		noprefix relbytetab, relbytehandle
-		noprefix relwordtab, relwordhandle
-		noprefix 0xffff, 0x0000
+noprefixtab:	noprefix inherenttab,nullhandle
+		noprefix indexedtab,indexedhandle
+		noprefix immedtab,immedhandle
+		noprefix regimmedtab,regimmedhandle
+		noprefix stkimmedtab,stkimmedhandle
+		noprefix relbytetab,relbytehandle
+		noprefix relwordtab,relwordhandle
+		noprefix $ffff,$0000
 
 ; we sort these by addressing mode. opcode "blocks" make up the bulk of the
 ; number space, luckily
 
-prefixtab:	prefix 0xb0, regaopstab, extendedhandle
-		prefix 0xf0, regbopstab, extendedhandle
-		prefix 0x70, memopstab, extendedhandle
+prefixtab:	prefix $b0,regaopstab,extendedhandle
+		prefix $f0,regbopstab,extendedhandle
+		prefix $70,memopstab,extendedhandle
 
-		prefix 0x00, memopstab, directhandle
-		prefix 0x90, regaopstab, directhandle
-		prefix 0xd0, regbopstab, directhandle
+		prefix $00,memopstab,directhandle
+		prefix $90,regaopstab,directhandle
+		prefix $d0,regbopstab,directhandle
 
-		prefix 0x80, regaopstab, immedhandle
-		prefix 0xc0, regbopstab, immedhandle
+		prefix $80,regaopstab,immedhandle
+		prefix $c0,regbopstab,immedhandle
 
-		prefix 0x60, memopstab, indexedhandle
-		prefix 0xa0, regaopstab, indexedhandle
-		prefix 0xe0, regbopstab, indexedhandle
+		prefix $60,memopstab,indexedhandle
+		prefix $a0,regaopstab,indexedhandle
+		prefix $e0,regbopstab,indexedhandle
 
-		prefix 0xff, 0x0000, 0x0000
+		prefix $ff,$0000,$0000
 
 ; inherent opcode table - opcodes with no parameter - not masked
 
-inherenttab:	mc 0x12, nopn
-		mc 0x13, syncn
-		mc 0x19, daan
-		mc 0x1d, sexn
-		mc 0x39, rtsn
-		mc 0x3a, abxn
-		mc 0x3b, rtin
-		mc 0x3d, muln
-		mc 0x3f, swin
-		mc 0x40, negan
-		mc 0x43, coman
-		mc 0x44, lsran
-		mc 0x46, roran
-		mc 0x47, asran
-		mc 0x48, lslan
-		mc 0x49, rolan
-		mc 0x4a, decan
-		mc 0x4c, incan
-		mc 0x4d, tstan
-		mc 0x4f, clran
-		mc 0x50, negbn
-		mc 0x53, combn
-		mc 0x54, lsrbn
-		mc 0x56, rorbn
-		mc 0x57, asrbn
-		mc 0x58, lslbn
-		mc 0x59, rolbn
-		mc 0x5a, decbn
-		mc 0x5c, incbn
-		mc 0x5d, tstbn
-		mc 0x5f, clrbn
-		mc 0xff, 0x0000
+inherenttab:	mc $12,nopn
+		mc $13,syncn
+		mc $19,daan
+		mc $1d,sexn
+		mc $39,rtsn
+		mc $3a,abxn
+		mc $3b,rtin
+		mc $3d,muln
+		mc $3f,swin
+		mc $40,negan
+		mc $43,coman
+		mc $44,lsran
+		mc $46,roran
+		mc $47,asran
+		mc $48,lslan
+		mc $49,rolan
+		mc $4a,decan
+		mc $4c,incan
+		mc $4d,tstan
+		mc $4f,clran
+		mc $50,negbn
+		mc $53,combn
+		mc $54,lsrbn
+		mc $56,rorbn
+		mc $57,asrbn
+		mc $58,lslbn
+		mc $59,rolbn
+		mc $5a,decbn
+		mc $5c,incbn
+		mc $5d,tstbn
+		mc $5f,clrbn
+		mc $ff,$0000
 
 ; special indexed opcode - no mask
 
-indexedtab:	mc 0x30, leaxn
-		mc 0x31, leayn
-		mc 0x32, leasn
-		mc 0x33, leaun
-		mc 0xff, 0x0000
+indexedtab:	mc $30,leaxn
+		mc $31,leayn
+		mc $32,leasn
+		mc $33,leaun
+		mc $ff,$0000
 
 ; special imediate (1 byte) opcodes - no mask
 
-immedtab:	mc 0x1a, orccn
-		mc 0x1c, andccn
-		mc 0x3c, cwain
-		mc 0xff, 0x0000
+immedtab:	mc $1a,orccn
+		mc $1c,andccn
+		mc $3c,cwain
+		mc $ff,$0000
 
 ; special immediate (1 byte) opcodes used in reg moving - no mask
 
-regimmedtab:	mc 0x1e, exgn
-		mc 0x1f, tfrn
-		mc 0xff, 0x0000
+regimmedtab:	mc $1e,exgn
+		mc $1f,tfrn
+		mc $ff,$0000
 
 ; special immediate (1 byte) opcodes used in stacking - no mask
 
-stkimmedtab:	mc 0x34, pshsn
-		mc 0x35, pulsn
-		mc 0x36, pshun
-		mc 0x37, pulun
-		mc 0xff, 0x0000
+stkimmedtab:	mc $34,pshsn
+		mc $35,pulsn
+		mc $36,pshun
+		mc $37,pulun
+		mc $ff,$0000
 
 ; special relative branches (1 byte offset)
 
-relbytetab:	mc 0x20, bran
-		mc 0x21, brnn
-		mc 0x22, bhin
-		mc 0x23, blsn
-		mc 0x24, bhsn
-		mc 0x25, blon
-		mc 0x26, bnen
-		mc 0x27, beqn
-		mc 0x28, bvcn
-		mc 0x29, bvsn
-		mc 0x2a, bpln
-		mc 0x2b, bmin
-		mc 0x2c, bgen
-		mc 0x2d, bltn
-		mc 0x2e, bgtn
-		mc 0x2f, blen
-		mc 0x8d, bsrn
-		mc 0xff, 0x0000
+relbytetab:	mc $20,bran
+		mc $21,brnn
+		mc $22,bhin
+		mc $23,blsn
+		mc $24,bhsn
+		mc $25,blon
+		mc $26,bnen
+		mc $27,beqn
+		mc $28,bvcn
+		mc $29,bvsn
+		mc $2a,bpln
+		mc $2b,bmin
+		mc $2c,bgen
+		mc $2d,bltn
+		mc $2e,bgtn
+		mc $2f,blen
+		mc $8d,bsrn
+		mc $ff,$0000
 
-; same again, but two bytes - still no mask
+; same again,but two bytes - still no mask
 
-relwordtab:	mc 0x16, lbran
-		mc 0x17, lbsrn
-		mc 0xff, 0x0000
+relwordtab:	mc $16,lbran
+		mc $17,lbsrn
+		mc $ff,$0000
 
 ; suffix (multiple prefixes) block of memery operations
 
-memopstab:	mc 0x00, negn
-		mc 0x03, comn
-		mc 0x04, lsrn
-		mc 0x06, rorn
-		mc 0x07, asrn
-		mc 0x08, lsln
-		mc 0x09, roln
-		mc 0x0a, decn
-		mc 0x0c, incn
-		mc 0x0d, tstn
-		mc 0x0e, jmpn
-		mc 0x0f, clrn
-		mc 0xff, 0x0000
+memopstab:	mc $00,negn
+		mc $03,comn
+		mc $04,lsrn
+		mc $06,rorn
+		mc $07,asrn
+		mc $08,lsln
+		mc $09,roln
+		mc $0a,decn
+		mc $0c,incn
+		mc $0d,tstn
+		mc $0e,jmpn
+		mc $0f,clrn
+		mc $ff,$0000
 
 ; stuff that operates on the a register is common between 3 addr mode
 
-regaopstab:	mc 0x00, suban
-		mc 0x01, cmpan
-		mc 0x02, sbcan
-		mc 0x03, subdn
-		mc 0x04, andan
-		mc 0x05, bitan
-		mc 0x06, ldan
-		mc 0x07, stan
-		mc 0x08, eoran
-		mc 0x09, adcan
-		mc 0x0a, oran
-		mc 0x0b, addan
-		mc 0x0c, cmpxn
-		mc 0x0d, jsrn		; 0x8d is bsr with no prefix
-		mc 0x0e, ldxn
-		mc 0x0f, stxn
-		mc 0xff, 0x0000
+regaopstab:	mc $00,suban
+		mc $01,cmpan
+		mc $02,sbcan
+		mc $03,subdn
+		mc $04,andan
+		mc $05,bitan
+		mc $06,ldan
+		mc $07,stan
+		mc $08,eoran
+		mc $09,adcan
+		mc $0a,oran
+		mc $0b,addan
+		mc $0c,cmpxn
+		mc $0d,jsrn		; $8d is bsr with no prefix
+		mc $0e,ldxn
+		mc $0f,stxn
+		mc $ff,$0000
 
 ; stuff that operates on the b register is common too
 
-regbopstab:	mc 0x00, subbn
-		mc 0x01, cmpbn
-		mc 0x02, sbcbn
-		mc 0x03, adddn
-		mc 0x04, andbn
-		mc 0x05, bitbn
-		mc 0x06, ldbn
-		mc 0x07, stbn
-		mc 0x08, eorbn
-		mc 0x09, adcbn
-		mc 0x0a, orbn
-		mc 0x0b, addbn
-		mc 0x0c, lddn
-		mc 0x0d, stdn
-		mc 0x0e, ldun
-		mc 0x0f, stun
-		mc 0xff, 0x0000
+regbopstab:	mc $00,subbn
+		mc $01,cmpbn
+		mc $02,sbcbn
+		mc $03,adddn
+		mc $04,andbn
+		mc $05,bitbn
+		mc $06,ldbn
+		mc $07,stbn
+		mc $08,eorbn
+		mc $09,adcbn
+		mc $0a,orbn
+		mc $0b,addbn
+		mc $0c,lddn
+		mc $0d,stdn
+		mc $0e,ldun
+		mc $0f,stun
+		mc $ff,$0000
 
 ; page 10 noprefixe and prefixe tables
 
-p10noprefixtab:	noprefix p10relwordtab, relwordhandle
-		noprefix p10inherenttab, nullhandle
-		noprefix 0xffff, 0x0000
+p10noprefixtab:	noprefix p10relwordtab,relwordhandle
+		noprefix p10inherenttab,nullhandle
+		noprefix $ffff,$0000
 
-p10prefixtab:	prefix 0x80, p10regatab, immedhandle
-		prefix 0x90, p10regatab, directhandle
-		prefix 0xa0, p10regatab, indexedhandle
-		prefix 0xb0, p10regatab, extendedhandle
-		prefix 0xc0, p10regbtab, immedhandle
-		prefix 0xd0, p10regbtab, directhandle
-		prefix 0xe0, p10regbtab, indexedhandle
-		prefix 0xf0, p10regbtab, extendedhandle
-		prefix 0xff, 0x0000, 0x0000
+p10prefixtab:	prefix $80,p10regatab,immedhandle
+		prefix $90,p10regatab,directhandle
+		prefix $a0,p10regatab,indexedhandle
+		prefix $b0,p10regatab,extendedhandle
+		prefix $c0,p10regbtab,immedhandle
+		prefix $d0,p10regbtab,directhandle
+		prefix $e0,p10regbtab,indexedhandle
+		prefix $f0,p10regbtab,extendedhandle
+		prefix $ff,$0000,$0000
 
 ; page 10 word relative opcoes
 
-p10relwordtab:	mc 0x21, lbrnn
-		mc 0x22, lbhin
-		mc 0x23, lblsn
-		mc 0x24, lbhsn
-		mc 0x25, lblon
-		mc 0x26, lbnen
-		mc 0x27, lbeqn
-		mc 0x28, lbvcn
-		mc 0x29, lbvsn
-		mc 0x2a, lbpln
-		mc 0x2b, lbmin
-		mc 0x2c, lbgen
-		mc 0x2d, lbltn
-		mc 0x2e, lbgtn
-		mc 0x2f, lblen
-		mc 0xff, 0x0000
+p10relwordtab:	mc $21,lbrnn
+		mc $22,lbhin
+		mc $23,lblsn
+		mc $24,lbhsn
+		mc $25,lblon
+		mc $26,lbnen
+		mc $27,lbeqn
+		mc $28,lbvcn
+		mc $29,lbvsn
+		mc $2a,lbpln
+		mc $2b,lbmin
+		mc $2c,lbgen
+		mc $2d,lbltn
+		mc $2e,lbgtn
+		mc $2f,lblen
+		mc $ff,$0000
 
 ; page 10 inherent opcodes
 
-p10inherenttab:	mc 0x3f, swi2n
-		mc 0xff, 0x0000
+p10inherenttab:	mc $3f,swi2n
+		mc $ff,$0000
 
-p10regatab:	mc 0x03, cmpdn
-		mc 0x0c, cmpyn
-		mc 0x0e, ldyn
-		mc 0x0f, styn
-		mc 0xff, 0x0000
+p10regatab:	mc $03,cmpdn
+		mc $0c,cmpyn
+		mc $0e,ldyn
+		mc $0f,styn
+		mc $ff,$0000
 
-p10regbtab:	mc 0x0e, ldsn
-		mc 0x0f, stsn
-		mc 0xff, 0x0000
+p10regbtab:	mc $0e,ldsn
+		mc $0f,stsn
+		mc $ff,$0000
 
 ; page 11 noprefix and prefix tables
 
-p11noprefixtab:	noprefix p11inherenttab, nullhandle
-		noprefix 0xffff, 0x000
+p11noprefixtab:	noprefix p11inherenttab,nullhandle
+		noprefix $ffff,$000
 
-p11prefixtab:	prefix 0x80, p11regtab, immedhandle
-		prefix 0x90, p11regtab, directhandle
-		prefix 0xa0, p11regtab, indexedhandle
-		prefix 0xb0, p11regtab, extendedhandle
-		prefix 0xff, 0x0000, 0x0000
+p11prefixtab:	prefix $80,p11regtab,immedhandle
+		prefix $90,p11regtab,directhandle
+		prefix $a0,p11regtab,indexedhandle
+		prefix $b0,p11regtab,extendedhandle
+		prefix $ff,$0000,$0000
 
-p11inherenttab:	mc 0x3f, swi3n
-		mc 0xff, 0x0000
+p11inherenttab:	mc $3f,swi3n
+		mc $ff,$0000
 
-p11regtab:	mc 0x03, cmpun
-		mc 0x0c, cmpsn
-		mc 0xff, 0x0000
+p11regtab:	mc $03,cmpun
+		mc $0c,cmpsn
+		mc $ff,$0000
 
 ; handy strings
 
-spacemsg:	.asciz ' '
-ehmsg:		.asciz '???'
-colonmsg:	.asciz ':'
-commamsg:	.asciz ','
-hexmsg:		.asciz '$'
-directmsg:	.asciz '<'
-immedmsg:	.asciz '#'
-negativemsg:	.asciz '-'
+spacemsg:	fcn ' '
+ehmsg:		fcn '???'
+colonmsg:	fcn ':'
+commamsg:	fcn ','
+hexmsg:		fcn '$'
+directmsg:	fcn '<'
+immedmsg:	fcn '#'
+negativemsg:	fcn '-'
 
 ; register names
 
-ccregmsg:	.asciz 'CC'
-aregmsg:	.asciz 'A'
-bregmsg:	.asciz 'B'
-dpregmsg:	.asciz 'DP'
-dregmsg:	.asciz 'D'
-xregmsg:	.asciz 'X'
-yregmsg:	.asciz 'Y'
-sregmsg:	.asciz 'S'
-uregmsg:	.asciz 'U'
-pcregmsg:	.asciz 'PC'
+ccregmsg:	fcn 'CC'
+aregmsg:	fcn 'A'
+bregmsg:	fcn 'B'
+dpregmsg:	fcn 'DP'
+dregmsg:	fcn 'D'
+xregmsg:	fcn 'X'
+yregmsg:	fcn 'Y'
+sregmsg:	fcn 'S'
+uregmsg:	fcn 'U'
+pcregmsg:	fcn 'PC'
 
 ; disassemble from u, count of x instructions
 
@@ -487,7 +489,7 @@ setcurrentpage:	ldy [currentpage]	; get the non prefix table
 		lda opcode		; get the opcode again
 		
 noprefixloop:	ldx ,y			; get the opcode pointer
-		cmpx #0xffff		; 0xffff marks this one's end
+		cmpx #$ffff		; $ffff marks this one's end
 		beq noprefixout		; if we are at the end, leave
 		lbsr procaddrmode	; process this opcode table
 		beq prefixout		; if zero then we proc'd a opcode
@@ -498,16 +500,16 @@ noprefixout:	ldy currentpage		; get the current page again
 		leay 2,y		; the preifxtab is next
 		ldy ,y			; deref to get it
 		lda opcode		; get the full opcode again
-		anda #0xf0		; we just want the prefix
+		anda #$f0		; we just want the prefix
 
 prefixloop:	ldb ,y			; get this prefix
-		cmpb #0xff		; 0xff marks the end of the table
+		cmpb #$ff		; $ff marks the end of the table
 		beq nomatch		; if we are at the end ??? to output
 		cmpa ,y+		; and see if it matches the prefix
 		bne prefixnotfound	; not found, so onward to next one
 
 		lda opcode		; our opcode has the right prefix
-		anda #0x0f		; mask off the interesting part
+		anda #$0f		; mask off the interesting part
 		lbsr procaddrmode	; and process the opcode table
 		beq prefixout		; if zero then we proc'd a opcode
 		
@@ -571,7 +573,7 @@ rawbyteascloop:	lda ,y+			; get the byte from the stream
 procaddrmode:	sty addrmode		; save the description pointer
 		ldy ,y			; deref into te opcode table
 procaddrloop:	ldb ,y			; load the first opcode
-		cmpb #0xff		; end of the opcode table?
+		cmpb #$ff		; end of the opcode table?
 		beq procaddrmodeo	; if so exit
 		cmpa ,y+		; matches our (maybe maked) opcode?
 		beq opcodefound		; if so deal with it
@@ -586,10 +588,10 @@ opcodefound:	ldx ,y			; if it did, deref to mn string
 		ldx ,y			; which must be de-referened
 ;		ldx [2,y]		; derefence into the handler pointer
 		jsr ,x			; and call it
-		orcc #0x04		; we processed an opcode -> set zero
+		orcc #$04		; we processed an opcode -> set zero
 		rts			; so we can now output the line
 procaddrmodeo:	ldy addrmode		; restore once more so caller
-		andcc #0xfb		; and mark it as not proc'd -> !zero
+		andcc #$fb		; and mark it as not proc'd -> !zero
 		rts
 
 ; post opcode bytes handler that does nothing at all
@@ -627,12 +629,12 @@ directhandle:	ldx #directmsg		; '<'
 immedhandle:	ldx #immedmsg		; '#'
 		lbsr outputappend	; append that
 		lda opcode		; get the original opcode
-		anda #0x0f		; mask off the low byte
-		cmpa #0x03		; this is subd, 2 bytes
+		anda #$0f		; mask off the low byte
+		cmpa #$03		; this is subd, 2 bytes
 		beq immedword		; ...
-		cmpa #0x0c		; cmpx is also 2 bytes
+		cmpa #$0c		; cmpx is also 2 bytes
 		beq immedword		; ...
-		cmpa #0x0e		; ldx is also 2 bytes
+		cmpa #$0e		; ldx is also 2 bytes
 		beq immedword		; ...
 		lda ,u+			; otherwise it must be 1 byte
 		lbsr outputbyte		; convert it
@@ -644,14 +646,14 @@ immedword:	ldd ,u++		; for words, grab it to d
 ; this is for exg and tfr - ehmsg is ??? - the index is the post byte,
 ; masked for source and destination
 
-regmovetab:	.word dregmsg, xregmsg, yregmsg, uregmsg
-		.word sregmsg, pcregmsg, ehmsg, ehmsg
-		.word aregmsg, bregmsg, ccregmsg, dpregmsg
-		.word ehmsg, ehmsg, ehmsg, ehmsg
+regmovetab:	fdb dregmsg,xregmsg,yregmsg,uregmsg
+		fdb sregmsg,pcregmsg,ehmsg,ehmsg
+		fdb aregmsg,bregmsg,ccregmsg,dpregmsg
+		fdb ehmsg,ehmsg,ehmsg,ehmsg
 
 regimmedhandle:	ldb ,u			; get the post opcode byte
 		ldy #regmovetab		; init the table pointer
-		andb #0xf0		; mask off the high nibble
+		andb #$f0		; mask off the high nibble
 		lsrb			; shift it down four times
 		lsrb			; ...
 		lsrb			; ...
@@ -662,7 +664,7 @@ regimmedhandle:	ldb ,u			; get the post opcode byte
 		ldx #commamsg		; and a comma
 		lbsr outputappend	; ...
 		ldb ,u+			; now get the original postbyte
-		andb #0x0f		; and mask off the low nibble
+		andb #$0f		; and mask off the low nibble
 		lslb			; times 2 because of word ptrs
 		leax [b,y]		; deref again to get the destination
 		lbsr outputappend	; ...
@@ -671,14 +673,14 @@ regimmedhandle:	ldb ,u			; get the post opcode byte
 ; stacking - pshs, puls, pshu, pulu - the table is a table of bits this time
 ; not offsets
 
-sstackingtab:	.word ccregmsg, aregmsg, bregmsg, dpregmsg
-		.word xregmsg, yregmsg, uregmsg, pcregmsg
-ustackingtab:	.word ccregmsg, aregmsg, bregmsg, dpregmsg
-		.word xregmsg, yregmsg, sregmsg, pcregmsg
+sstackingtab:	fdb ccregmsg,aregmsg,bregmsg,dpregmsg
+		fdb xregmsg,yregmsg,uregmsg,pcregmsg
+ustackingtab:	fdb ccregmsg,aregmsg,bregmsg,dpregmsg
+		fdb xregmsg,yregmsg,sregmsg,pcregmsg
 
 stkimmedhandle: ldb #8			; 8 shifts for a byte
 		lda opcode		; get the original opcode
-		bita #0x02		; bit 1 0 means s stacking , else u
+		bita #$02		; bit 1 0 means s stacking , else u
 		beq sstacking		; it is pshs or puls
 		ldy #ustackingtab	; so set the table pointer
 		bra stackingstart	; hop hop
@@ -700,42 +702,42 @@ stkimmedout:	rts			; out
 
 ; indexed mode decoder - the most complex handler by far
 
-sindirectmsg:	.asciz '['
-eindirectmsg:	.asciz ']'
-incmsg:		.asciz '+'
-incincmsg:	.asciz '++'
-decmsg:		.asciz '-'
-decdecmsg:	.asciz '--'
+sindirectmsg:	fcn '['
+eindirectmsg:	fcn ']'
+incmsg:		fcn '+'
+incincmsg:	fcn '++'
+decmsg:		fcn '-'
+decdecmsg:	fcn '--'
 
 ; the different indexing mode, 16 of them but a few are unused
 
-offsettab:	.word indexreginc, indexregincinc, indexregdec, indexregdecdec
-		.word indexreg, indexbreg, indexareg, indexinvalid
-		.word indexbytereg, indexwordreg, indexinvalid, indexdreg
-		.word indexbytepc, indexwordpc, indexinvalid, indexindirect
+offsettab:	fdb indexreginc,indexregincinc,indexregdec,indexregdecdec
+		fdb indexreg,indexbreg,indexareg,indexinvalid
+		fdb indexbytereg,indexwordreg,indexinvalid,indexdreg
+		fdb indexbytepc,indexwordpc,indexinvalid,indexindirect
 
 ; the front end to the handler
 
 indexedhandle:	lda ,u+			; grab the index code byte
 		sta indexcode		; save it away
 		bmi indexoffset		; bit7 set?
-		anda #0x1f		; if not->offset is in this byte
+		anda #$1f		; if not->offset is in this byte
 		lbsr outputsignfive	; output just the low 5 bits
 		ldx #commamsg		; then a comma
 		lbsr outputappend	; ...
 		bsr showindexreg	; and the register we are offsetting
 		rts			; done
-indexoffset:	bita #0x10		; bit4 set->
+indexoffset:	bita #$10		; bit4 set->
 		beq notindirect		; means indirect mode is used
 		ldx #sindirectmsg	; this is a '['
 		lbsr outputappend	; add it to the output
-notindirect:	anda #0x0f		; mask iff the low 4 bits
+notindirect:	anda #$0f		; mask iff the low 4 bits
 		lsla			; shift up to get index into tab
 		ldx #offsettab		; setup the offset mode table
 		ldx a,x			; add the offset type
 		jsr ,x			; jump into the handler
 		lda indexcode		; restore the index code again
-		bita #0x10		; and test test for indirect
+		bita #$10		; and test test for indirect
 		beq indexout		; if not, then done
 		ldx #eindirectmsg	; otherwise get the ']'
 		lbsr outputappend	; and add it to the stream
@@ -743,18 +745,18 @@ indexout:	rts
 
 ; these are the four index registers
 
-indexregtab:	.word xregmsg, yregmsg, uregmsg, sregmsg
+indexregtab:	fdb xregmsg,yregmsg,uregmsg,sregmsg
 
 ; turns the index code byte into a register and outputs it
 
 showindexreg:	lda indexcode		; load the index code back
-		anda #0x7f		; mask off the high bit
+		anda #$7f		; mask off the high bit
 		lsra			; shift down to the end
 		lsra			; ...
 		lsra			; ...
 		lsra			; ,,,
 		lsra			; ,,,
-		lsla			; shift up, since tab is words
+		lsla			; shift up,since tab is words
 		ldx #indexregtab	; setup the tablee
 		ldx a,x			; add the reg type and deref
 		lbsr outputappend	; add the reg to the stream
@@ -858,7 +860,7 @@ indexindirect:	ldd ,u++		; get the next work
 
 outputinit:	ldx #outputbuffer
 		lda #80			; fill term width with spaces
-		ldb #0x20		; 'space'
+		ldb #$20		; 'space'
 outputinitloop:	stb ,x+			; fill with a space
 		deca			; upto 80 chars
 		bne outputinitloop	; back for more
@@ -882,11 +884,11 @@ outputasc:	ldx outputpointer	; get the current position
 
 outputsignfive:	ldx #hexmsg
 		lbsr outputappend
-		bita #0x10
+		bita #$10
 		beq plusfive
 		ldx #negativemsg
 		lbsr outputappend
-		eora #0x1f
+		eora #$1f
 		inca
 plusfive:	ldx outputpointer
 		lbsr bytetoaschex
@@ -937,7 +939,7 @@ plusword:	ldx outputpointer
 
 outputbackone:	pshs x,a
 		ldx outputpointer	; get the current position
-		lda #0x20		; 'space'
+		lda #$20		; 'space'
 		sta ,-x			; blank current pos and back move one
 		stx outputpointer	; save the new position
 		puls x,a
@@ -947,3 +949,5 @@ outputmoveto:	ldx #outputbuffer	; get the starting position
 		leax a,x		; add the column offset
 		stx outputpointer	; save it to the current position
 		rts
+
+		endsection

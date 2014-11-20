@@ -1,20 +1,22 @@
+		section _main
+
 ;;; SERIAL PORT ;;;
 
 ; serial port setup - this needs more comments
 
-serialinit:	lda #0b00010011		; no parity, 8 bits/char - MR1A,B
+serialinit:	lda #%00010011		; no parity, 8 bits/char - MR1A,B
 		sta MRA88681
 		sta MRB88681
-		lda #0b00000111		; 1.000 stop bits - MR2A,B
+		lda #%00000111		; 1.000 stop bits - MR2A,B
 		sta MRA88681
 		sta MRB88681
-		lda #0b00000101		; enable tx and rx
+		lda #%00000101		; enable tx and rx
 		sta CRA88681
-		lda #0b10000000		; extend on rx
+		lda #%10000000		; extend on rx
 		sta CRA88681
-		lda #0b10100000		; extend on tx
+		lda #%10100000		; extend on tx
 		sta CRA88681
-		lda #0b10001000		; 115.2K
+		lda #%10001000		; 115.2K
 		sta CSRA88681
 
 		; OP0 and OP1 - turn off the led
@@ -28,7 +30,7 @@ serialinit:	lda #0b00010011		; no parity, 8 bits/char - MR1A,B
 ; put the char in a, returning when its sent - corrupts b
 
 serialputchar:	ldb SRA88681		; get status
-		andb #0b00000100	; transmit empty
+		andb #%00000100	; transmit empty
 		beq serialputchar	; wait for port to be idle
 		sta THRA88681		; output the char
 		rts
@@ -36,7 +38,7 @@ serialputchar:	ldb SRA88681		; get status
 ; serialgetchar - gets a char, putting it in a
 
 serialgetchar:	lda SRA88681		; get status
-		anda #0b00000001	; input empty?
+		anda #%00000001	; input empty?
 		beq serialgetchar	; go back and look again
 		lda RHRA88681		; get the char into a
 serialgetcharo:	rts
@@ -46,7 +48,7 @@ serialgetcharo:	rts
 serialgetwto:	pshs x
 		ldx #0xffff
 timeoutloop:	lda SRA88681
-		anda #0b00000001
+		anda #%00000001
 		beq notready
 		lda RHRA88681
 		clrb			; no timeout occured
@@ -66,4 +68,5 @@ serialactive:	ldx #serialgetchar
 		ldx #serialgetwto
 		stx iogetwtop
 		rts
-		
+
+		endsection		

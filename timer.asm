@@ -1,8 +1,10 @@
+		section _main
+
 ;;; TIMER ;;;
 
-timerinit:	lda #0b01110000		; tick on the 3.684Mhz crystal / 16
+timerinit:	lda #%01110000		; tick on the 3.684Mhz crystal / 16
 		sta ACR88681
-		lda #0b00001000		; mask in the timer overflow
+		lda #%00001000		; mask in the timer overflow
 		sta IMR88681
 		lda #0x11
 		sta CTU88681
@@ -31,3 +33,5 @@ timerhandler:	pshs a,x
 		stx uptimeh		; store it back
 timerhandlero:	puls a,x
 		rts
+
+		endsection

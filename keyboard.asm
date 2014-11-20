@@ -1,3 +1,5 @@
+		section _main
+
 ; contains routines for dealing with the keyboard; interrupt handler etc
 
 normaltab:
@@ -194,9 +196,9 @@ asciimode:	bita #0x80
 		bra keydownend
 keydown:	ldb #1
 keydownend:	anda #0x7f		; mask out the up/down; its in b
-		cmpa #0o13		; left shift
+		cmpa #@13		; left shift
 		beq asciilshift
-		cmpa #0o64		; right shift
+		cmpa #@64		; right shift
 		beq asciirshift
 		tstb			; key direction?
 		bne asciiconvert	; down, so convert it
@@ -208,9 +210,9 @@ asciirshift:	stb asciirshifton
 		rts			; done in the keyboard handler
 
 asciiconvert:	ldx #keybuffer
-		cmpa #0o71		; return
+		cmpa #@71		; return
 		beq asciireturn
-		cmpa #0o01		; backspace
+		cmpa #@01		; backspace
 		beq asciibacksp
 		tst asciilshifton
 		bne asciishifted
@@ -243,3 +245,5 @@ keypushbuf:	tsta				; don't fill nulls
 		andb #0x3f
 		stb keywritepointer
 keypushbufo:	rts
+
+		endsection

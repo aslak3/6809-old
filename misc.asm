@@ -1,3 +1,5 @@
+		section _main
+
 ;;; MISC ;;;
 
 ; delay by y - subroutine
@@ -42,3 +44,5 @@ mul32:		lslb
 		lslb
 		rola			; * 32
 		rts
+
+		endsection

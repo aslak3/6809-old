@@ -1,44 +1,46 @@
+		section _main
+
 ; AY-8910
 
-start:    	.byte 0x07, 0x38, 0x08, 0x18
-		.byte 0xff, 0xff
+start:    	fcb $07,$38,$08,$18
+		fcb $ff,$ff
 
-stop:		.byte 0x07, 0xff, 0x08, 0x00
-		.byte 0xff, 0xff
+stop:		fcb $07,$ff,$08,$00
+		fcb $ff,$ff
 
-envelope:	.byte 0x0b, 0x00, 0x0c, 0x08	 	; envelope
-		.byte 0xff, 0xff
+envelope:	fcb $0b,$00,$0c,$08	 	; envelope
+		fcb $ff,$ff
 
-shapetable:	.byte 0x00, 0x04, 0x0b, 0x0d
-		.byte 0x09, 0x0c, 0x0e, 0x0a
+shapetable:	fcb $00,$04,$0b,$0d
+		fcb $09,$0c,$0e,$0a
 
-notetable:	.ascii 'c'
-		.byte 0x07, 0x77
-		.byte 0x80
-		.byte 0x07, 0x0e
-		.ascii 'd'
-		.byte 0x06, 0xa6
-		.byte 0x80
-		.byte 0x06, 0x46
-		.ascii 'e'
-		.byte 0x05, 0xec
-		.ascii 'f'
-		.byte 0x05, 0x96
-		.byte 0x80
-		.byte 0x05, 0x48
-		.ascii 'g'
-		.byte 0x04, 0xfb
-		.byte 0x80
-		.byte 0x04, 0xb4
-		.ascii 'a'
-		.byte 0x04, 0x70
-		.byte 0x80
-		.byte 0x04, 0x30
-		.ascii 'b'
-		.byte 0x03, 0xf4
-		.byte 0x80
-		.byte 0x03, 0xbb
-		.byte 0
+notetable:	fcc 'c'
+		fcb $07,$77
+		fcb $80
+		fcb $07,$0e
+		fcc 'd'
+		fcb $06,$a6
+		fcb $80
+		fcb $06,$46
+		fcc 'e'
+		fcb $05,$ec
+		fcc 'f'
+		fcb $05,$96
+		fcb $80
+		fcb $05,$48
+		fcc 'g'
+		fcb $04,$fb
+		fcb $80
+		fcb $04,$b4
+		fcc 'a'
+		fcb $04,$70
+		fcb $80
+		fcb $04,$30
+		fcc 'b'
+		fcb $03,$f4
+		fcb $80
+		fcb $03,$bb
+		fcb 0
 
 ay8910start:	pshs x
 		ldx #start
@@ -55,7 +57,7 @@ ay8910stop:	pshs x
 		rts
 
 ay8910streamer:	ldd ,x++
-		cmpa #0xff
+		cmpa #$ff
 		beq ay8910stout
 		sta AYLATCHADDR
 		stb AYWRITEADDR
@@ -65,19 +67,19 @@ ay8910stout:  	rts
 ay8910playnote:	pshs x
 		lbsr ay8910start
 		puls x
-		lda #0x0d
+		lda #$0d
 		sta AYLATCHADDR
 		ldb ayshape
 		stb AYWRITEADDR
 		tfr x,d
-		lda #0x00
+		lda #$00
 		sta AYLATCHADDR
 		stb AYWRITEADDR
 		tfr x,d
-		ldb #0x01
+		ldb #$01
 		stb AYLATCHADDR
 		sta AYWRITEADDR
-		ldx #0xffff
+		ldx #$ffff
 		lbsr aydelay
 		rts
 
@@ -99,21 +101,21 @@ ay8910playtune:	lda #4
 		tfr x,y
 playtuneloop:	clr aysharp
 noclrsharploop:	lda ,y+
-		cmpa #0x00
+		cmpa #$00
 		beq playtuneout
-		cmpa #0x20
+		cmpa #$20
 		beq playtunedelay
-		cmpa #0x6f
+		cmpa #$6f
 		beq playtuneoctave
-		cmpa #0x77
+		cmpa #$77
 		beq playtuneshape
-		cmpa #0x23
+		cmpa #$23
 		beq playtunesharp
 		ldx #notetable
 notescanloop:	cmpa ,x
 		beq notefoundlc
 		tfr a,b
-		adda #0x20
+		adda #$20
 		cmpa ,x
 		tfr b,a
 		beq notefounduc
@@ -133,15 +135,15 @@ notenotsharp:	ldx ,x			; we can now get the duration
 		lbsr ay8910shifter	; shift to the right octave
 		lbsr ay8910playnote
 		bra playtuneloop		
-playtunedelay:	ldx #0xffff
+playtunedelay:	ldx #$ffff
 		lbsr aydelay
 		bra playtuneloop
 playtuneoctave: lda ,y+
-		suba #0x30
+		suba #$30
 		sta ayoctave
 		bra playtuneloop
 playtuneshape:	lda ,y+
-		suba #0x30
+		suba #$30
 		ldx #shapetable
 		lda a,x
 		sta ayshape
@@ -160,3 +162,5 @@ readjoystick:	lda #AYIOA
 		lda AYREADADDR
 		coma
 		rts
+
+		endsection
