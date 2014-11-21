@@ -2,7 +2,15 @@
 
 ; This is a whole game
 
+gameovermsg:	.asciz 'Game Over...'
+
 game:		lbsr randominit		; prepare the pseudo random numbers
+
+		lda #3			; start with 3 lives
+		sta lives,pcr		; save the lives
+
+		ldx #0x2000		; starting delay
+		stx movementdelay,pcr	; it's reduced as snake grows
 
 		lda #2			; start at length of two
 		sta snakelength,pcr	; save the length
@@ -10,6 +18,7 @@ game:		lbsr randominit		; prepare the pseudo random numbers
 
 life:		lbsr clearscreen	; back to empty screen
 		lbsr drawplayarea	; draw the border
+		lbsr showlives		; show the number of lives
 
 		lda #12			; row coord of where snake starts
 		leax rowsnake,pcr	; get the top of the row table
@@ -55,14 +64,24 @@ nocollision:	lda #SNAKEHEADTILE	; finally we can draw the new head
 		ldb headpos,pcr		; get the headposition again
 		lbsr drawsnakepart	; and draw the head
 
-		ldx #0x2000		; delay the game
+		ldx movementdelay,pcr	; delay the game
 controlloop:	lbsr controlsnake	; but in each delay loop, poll stick
 		leax -1,x		; decrement delay
 		bne controlloop		; until zero
 
 		bra mainloop		; and back to the top again
 
-death:		bra life
+death:		dec lives,pcr		; down a life!
+		bne life
+
+		lbsr showlives
+
+		lda #12
+		ldb #10
+		leax gameovermsg,pcr
+		lbsr printstrat
+
+		rts
 
 ; draws a bit of the snake, tile in a. may be blank (0), maybe body or maybe
 ; head. b has position along snake array we want to draw.
@@ -132,7 +151,12 @@ docollisiono:	rts
 
 yumyum:		inc snakelength,pcr
 		lbsr placenewfood
-		lda #1
+		ldx movementdelay,pcr
+		leax -0x0040,x		; at 120 food it will be max speed 
+		cmpx #0x0200		; up 16 times faster then at start
+		bls yumyumo
+		stx movementdelay,pcr
+yumyumo:	lda #1
 		bra docollisiono
 
 placenewfood:	lda #FOODTILE
@@ -185,10 +209,13 @@ randomnumber:	lda randomseed
 		asla
 		beq noeor		; if the input was $80, skip the eor
 		bcc noeor
-doeor:		eora #0x1d
+doeor:		eora #0xf5
 noeor:		sta randomseed
 
 		rts
+
+titlemessage:	.asciz ' SNAKE! '
+livesmessage:	.asciz '     '
 
 drawplayarea:	clra			; top left is 0, 0
 		clrb			; ..
@@ -205,9 +232,37 @@ drawplayarea:	clra			; top left is 0, 0
 		leax titlemessage,pcr	; get the location of the message
 		lbsr printstrat		; and print it
 
+		lda #23			; bottom row
+		ldb #24			; at the right
+		leax livesmessage,pcr	; get the location of the message
+		lbsr printstrat		; and print it
+
+		rts
+
+showlives:	leau -1,u
+		ldb #25
+		lda #3
+		sta ,u
+showlivesn:	lda lives,pcr
+		cmpa ,u
+		bhs showlife
+		lda #DEADSNAKETILE
+		sta stamp,pcr
+		bra showlivesstate
+showlife:	lda #SNAKEHEADTILE
+		sta stamp,pcr
+showlivesstate:	lda #23
+		lbsr stampat
+		incb
+		dec ,u
+		bne showlivesn
+showliveso:	leau 1,u
 		rts
 
 ; Variables
+
+lives:		.rmb 1			; number of lives left
+movementdelay:	.rmb 2			; how long to pause between steps
 
 rowsnake:	.rmb 256		; circular array for snake position
 colsnake:	.rmb 256		; for rows and columns
@@ -218,4 +273,3 @@ rowdirection:	.rmb 1			; either -1, 0 or 1 for row dir
 coldirection:	.rmb 1			; either -1, 0 or 1 for col dir
 
 randomseed:	.rmb 1			; seed, and last random made
-

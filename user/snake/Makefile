@@ -1,7 +1,7 @@
 PROG = snake.bin
 ASM = snake.asm
 
-OTHER_ASM = graphics.asm video.asm
+OTHER_ASM = snake.asm game.asm graphics.asm video.asm
 
 all: $(PROG)
 

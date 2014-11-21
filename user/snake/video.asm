@@ -56,16 +56,15 @@ printattabn:	sty ,x++		; save the start of the row
 
 ; clear whole screen
 
-clearscreen:	ldy #0x0000
+clearscreen:	ldy #0x8000
 		jsr jvseekcommon
 		jsr jvseekwrite
 		ldx #24*32
-clearscreenn:	clr VPORT0
+		clra
+clearscreenn:	sta VPORT0
 		leax -1,x
 		bne clearscreenn
 		rts
-
-titlemessage:	.asciz " SNAKE! "
 
 ; prints the string at x (until null) at row a, col b
 
