@@ -15,6 +15,8 @@ videoinit:	jsr jvinit		; do the core init, clear vram
 		; 0x400 - colours of tiles
 		loadconstreg VCOLBASELREG, 0x00
 		loadconstreg VCOLBASEHREG, 0x01
+		; hack
+		loadconstreg VDISPLAYPOSREG, 0x08
 
 		leax printattab,pcr	; prepae lookup table of row->vram
 		ldy #0x8000		; vram starts at 0x8000

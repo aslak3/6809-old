@@ -16,7 +16,7 @@ game:		lbsr randominit		; prepare the pseudo random numbers
 		sta snakelength,pcr	; save the length
 		clr headpos,pcr		; snake snarts at the top of table
 
-life:		lbsr clearscreen	; back to empty screen
+lifeloop:	lbsr clearscreen	; back to empty screen
 		lbsr drawplayarea	; draw the border
 		lbsr showlives		; show the number of lives
 
@@ -72,16 +72,16 @@ controlloop:	lbsr controlsnake	; but in each delay loop, poll stick
 		bra mainloop		; and back to the top again
 
 death:		dec lives,pcr		; down a life!
-		bne life
+		bne lifeloop		; start of life,  center snake
 
-		lbsr showlives
+		lbsr showlives		; show that all lives are gone
 
-		lda #12
-		ldb #10
-		leax gameovermsg,pcr
-		lbsr printstrat
+		lda #12			; center the game over message
+		ldb #10			; ...
+		leax gameovermsg,pcr	; ...
+		lbsr printstrat		; ...
 
-		rts
+		rts			; end of game
 
 ; draws a bit of the snake, tile in a. may be blank (0), maybe body or maybe
 ; head. b has position along snake array we want to draw.
@@ -129,35 +129,41 @@ movesnake:	ldb headpos,pcr		; get the current head
 		inc headpos,pcr		; move the head to the next position
 		rts			; will wrap 255->0
 
+; see what is at the tile where the head of the snake now is, setting a
+; to the tile number, b is the position along the array
 
+testcollide:	leax rowsnake,pcr	; setup row table pointer
+		abx			; add (unsigned) the snake pos
+		lda ,x			; and deref to get row of head
 
-testcollide:	leax rowsnake,pcr
-		abx
-		lda ,x
+		leax colsnake,pcr	; setup col table pointer
+		abx			; add (unsigned) the snake pos
+		ldb ,x			; and deref to get col of head
 
-		leax colsnake,pcr
-		abx
-		ldb ,x
-
-		lbsr peekat
-		lda peek,pcr
+		lbsr peekat		; get whats under the new head
+		lda peek,pcr		; save it in a
 
 		rts
 
-docollision:	cmpa #FOODTILE
-		beq yumyum
-		clra
+; process a collision by looking at a
+
+docollision:	cmpa #FOODTILE		; food for the nake?
+		beq yumyum		; eat the food
+		clra			; zero means deathh
 docollisiono:	rts
 
-yumyum:		inc snakelength,pcr
-		lbsr placenewfood
-		ldx movementdelay,pcr
+yumyum:		inc snakelength,pcr	; snake grows as it eats
+		lbsr placenewfood	; put some new food down
+		ldx movementdelay,pcr	; get current snake speed
 		leax -0x0040,x		; at 120 food it will be max speed 
 		cmpx #0x0200		; up 16 times faster then at start
-		bls yumyumo
-		stx movementdelay,pcr
-yumyumo:	lda #1
+		bls yumyumo		; don't make delay too silly!
+		stx movementdelay,pcr	; save it
+yumyumo:	lda #1			; we dont die when eating food!
 		bra docollisiono
+
+; place some new food at a random empty place. returns with a nd b at food
+; location.
 
 placenewfood:	lda #FOODTILE
 		sta stamp,pcr
