@@ -16,8 +16,10 @@ game:		lbsr randominit		; prepare the pseudo random numbers
 		sta snakelength,pcr	; save the length
 		clr headpos,pcr		; snake snarts at the top of table
 
-lifeloop:	lbsr clearscreen	; back to empty screen
+		lbsr clearscreen	; clear scren at te start
 		lbsr drawplayarea	; draw the border
+
+lifeloop:	lbsr clearplayarea	; clear the main portion
 		lbsr showlives		; show the number of lives
 
 		lda #12			; row coord of where snake starts
@@ -80,6 +82,13 @@ death:		dec lives,pcr		; down a life!
 		ldb #10			; ...
 		leax gameovermsg,pcr	; ...
 		lbsr printstrat		; ...
+
+gameoverloop:	jsr jreadjoystick	; read the joystick
+		bita #JOYFIRE1		; test for fire
+		beq gameoverloop	; not pressed? check again
+
+		ldy #0x0000
+		jsr jdelay
 
 		rts			; end of game
 
@@ -190,19 +199,25 @@ controlsnake:	jsr jreadjoystick
 		bne movedown
 controlsnakeo:	rts
 
-moveleft:	lda #-1
+moveleft:	lda #1
 		bra moveleftright
-moveright:	lda #1
+moveright:	lda #-1
 		bra moveleftright
-moveup:		lda #-1
+moveup:		lda #1
 		bra moveupdown
-movedown:	lda #1
+movedown:	lda #-1
 		bra moveupdown
 
-moveleftright:	sta coldirection,pcr
+moveleftright:	cmpa coldirection,pcr
+		beq controlsnakeo
+		nega
+		sta coldirection,pcr
 		clr rowdirection,pcr
 		bra controlsnakeo
-moveupdown:	clr coldirection,pcr
+moveupdown:	cmpa rowdirection,pcr
+		beq controlsnakeo
+		nega
+		clr coldirection,pcr
 		sta rowdirection,pcr
 		bra controlsnakeo
 

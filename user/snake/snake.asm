@@ -11,9 +11,35 @@
 
 		lbsr videoinit
 
-		lbsr game
+menu:		lbsr clearscreen
 
-		swi
+		lda #11
+		ldb #6
+		leax pressfire,pcr
+		lbsr printstrat
+
+		lda #13
+		ldb #6
+		leax orexit,pcr
+		lbsr printstrat
+
+menupollloop:	jsr jreadjoystick
+		bita #JOYFIRE1
+		bne startgame
+		bita #JOYUP
+		bne exit
+
+		bra menupollloop
+
+startgame:	lbsr game
+
+		bra menu
+
+exit:		swi
+
+pressfire:	.asciz 'Press FIRE to start'
+
+orexit:		.asciz 'Or UP to exit'
 
 		.include 'game.asm'
 		.include 'graphics.asm'

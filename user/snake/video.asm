@@ -58,14 +58,31 @@ printattabn:	sty ,x++		; save the start of the row
 
 ; clear whole screen
 
-clearscreen:	ldy #0x8000
-		jsr jvseekcommon
-		jsr jvseekwrite
-		ldx #24*32
-		clra
-clearscreenn:	sta VPORT0
-		leax -1,x
-		bne clearscreenn
+clearscreen:	ldy #0x8000		; start at the top left corner
+		jsr jvseekcommon	; seek here
+		jsr jvseekwrite		; for writing
+		ldx #24*32		; total number of tiles on screen
+		clra			; cant clr MM as it will read
+clearscreenn:	sta VPORT0		; write to vram
+		leax -1,x		; dec the column count
+		bne clearscreenn	; more tiles?
+		rts
+
+clearplayarea:	ldy #0x8000		; start at the top left corner
+		lda #22			; we need 22 rows (24-2)
+		sta ,u			; save row count in a variable
+		leay 32,y		; skip the top row of border
+nextrow:	leay 1,y		; move across the left hand border
+		jsr jvseekcommon	; seek here
+		jsr jvseekwrite		; for writing
+		ldx #30			; we need 32-2=30 blank tiles
+		clra			; clr MM will read, so clear reg a
+nextrown:	sta VPORT0		; store it in the vram
+		leax -1,x		; dec the coloumn counter
+		bne nextrown		; more coloumns?
+		leay 31,y		; skip to the left most col on next row
+		dec ,u			; dec the row counter
+		bne nextrow		; more rows?
 		rts
 
 ; prints the string at x (until null) at row a, col b
