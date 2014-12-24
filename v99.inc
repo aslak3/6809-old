@@ -18,3 +18,11 @@
 		lda #register|0x80
 		sta VDIRECTPORT
 .endm
+
+; gets the value of the status register
+
+.macro		getstatusreg register
+		lda #register
+		loadareg VSTATUSREG
+		lda VSTATUSPORT
+.endm

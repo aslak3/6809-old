@@ -9,7 +9,7 @@
 		lda #10
 		leax message,pcr
 again:		pshs a,x
-		jsr jserialputstr
+		jsr jioputstr
 		ldy #0x4000
 		jsr jdelay
 		puls a,x

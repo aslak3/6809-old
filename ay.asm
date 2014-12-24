@@ -1,12 +1,12 @@
 ; AY-8910
 
-start:    	.byte 0x07, 0x38, 0x08, 0x18
+start:    	.byte AYCTRL, 0x38, AYAAMPL, 0x18
 		.byte 0xff, 0xff
 
-stop:		.byte 0x07, 0xff, 0x08, 0x00
+stop:		.byte AYCTRL, 0xfff, AYAAMPL, 0x00
 		.byte 0xff, 0xff
 
-envelope:	.byte 0x0b, 0x00, 0x0c, 0x08	 	; envelope
+envelope:	.byte AYENVFREQL, 0x00, AYENVFREQL, 0x08	 	; envelope
 		.byte 0xff, 0xff
 
 shapetable:	.byte 0x00, 0x04, 0x0b, 0x0d
@@ -40,30 +40,30 @@ notetable:	.ascii 'c'
 		.byte 0x03, 0xbb
 		.byte 0
 
-ay8910start:	pshs x
+aystart:	pshs x
 		ldx #start
-		bsr ay8910streamer
+		bsr aystreamer
 		ldx #envelope
-		bsr ay8910streamer
+		bsr aystreamer
 		puls x
 		rts
 
-ay8910stop:	pshs x
+aystop:	pshs x
 		ldx #stop
-		bsr ay8910streamer
+		bsr aystreamer
 		puls x
 		rts
 
-ay8910streamer:	ldd ,x++
+aystreamer:	ldd ,x++
 		cmpa #0xff
-		beq ay8910stout
+		beq aystout
 		sta AYLATCHADDR
 		stb AYWRITEADDR
-		bra ay8910streamer
-ay8910stout:  	rts
+		bra aystreamer
+aystout:  	rts
 
-ay8910playnote:	pshs x
-		lbsr ay8910start
+ayplaynote:	pshs x
+		lbsr aystart
 		puls x
 		lda #0x0d
 		sta AYLATCHADDR
@@ -81,19 +81,19 @@ ay8910playnote:	pshs x
 		lbsr aydelay
 		rts
 
-ay8910shifter:	stx ayduration
+ayshifter:	stx ayduration
 		tfr b,a
 		adda ayoctave
 		inca
-ay8910shloop:	deca
-		beq ay8910shout
+ayshloop:	deca
+		beq ayshout
 		lsr ayduration
 		ror ayduration+1
-		bra ay8910shloop
-ay8910shout:	ldx ayduration
+		bra ayshloop
+ayshout:	ldx ayduration
 		rts
  
-ay8910playtune:	lda #4
+ayplaytune:	lda #4
 		sta ayoctave
 		clr ayshape
 		tfr x,y
@@ -130,8 +130,8 @@ notefound:	leax 1,x
 		beq notenotsharp
 		leax 3,x		; sharpen
 notenotsharp:	ldx ,x			; we can now get the duration
-		lbsr ay8910shifter	; shift to the right octave
-		lbsr ay8910playnote
+		lbsr ayshifter	; shift to the right octave
+		lbsr ayplaynote
 		bra playtuneloop		
 playtunedelay:	ldx #0xffff
 		lbsr aydelay

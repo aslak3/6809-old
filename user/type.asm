@@ -10,11 +10,11 @@
 again:		lda ,x+
 		cmpa #0
 		beq out
-		jsr jserialputchar
+		jsr jioputchar
 		cmpa #LF
 		bne again
 		lda #CR
-		jsr jserialputchar
+		jsr jioputchar
 		bra again
 
 out:		swi

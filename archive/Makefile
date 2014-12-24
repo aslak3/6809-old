@@ -14,5 +14,5 @@ clean:
 	rm -f $(BINS) *.hex *.bin
 
 upload:
-	$(UPLOAD) -f $(BIN) -s /dev/ttyUSB1
+	$(UPLOAD) -f $(BIN) -s /dev/ttyUSB0
 		

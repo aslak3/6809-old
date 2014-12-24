@@ -4,6 +4,14 @@
 
 		.org 0
 
+; interrupt handler routines
+
+handleds3234::	.rmb 2
+handle65spi::	.rmb 2
+handle65c22::	.rmb 2
+handlevdc::	.rmb 2
+handle88c681::	.rmb 2
+
 ; the current open channel
 
 iogetcharp:	.rmb 2
@@ -50,8 +58,8 @@ statementend:	.rmb 2
 flashblock:	.rmb 64
 timeoutput:	.rmb 8
 
-uptimeh::	.rmb 2
-uptimel::	.rmb 2
+uptimeh:	.rmb 2
+uptimel:	.rmb 2
 
 idescratchsec:	.rmb 512
 firstpartsects:	.rmb 2

@@ -166,6 +166,13 @@ nextbyte:	clr ,x
 init:		clr IRQFILTER		; clear interrupt regs
 		clr FIRQFILTER		; they will be init'd in inits
 
+		ldx #handlenothing
+		stx handleds3234
+		stx handle65spi
+		stx handle65c22
+		stx handlevdc
+		stx handle88c681
+
 		clr keyreadpointer
 		clr keywritepointer
 		lbsr serialinit		; setup the serial port
@@ -206,7 +213,7 @@ noscreen:	ldx #greetingmsg	; greetings!
 		lbsr ioputstr		; output the greeting
 
 		ldx #bootbeeps
-		lbsr ay8910playtune	; play booting beeps
+		lbsr ayplaytune	; play booting beeps
 
 		lda #0x20		; beep frequency
 		sta SOUNDER		; set the beeper beeping
@@ -220,7 +227,6 @@ noscreen:	ldx #greetingmsg	; greetings!
 		
 		clr SOUNDER		; silence the beeper
 
-
 		enableinterrupts	; enable interrupts
 
 		swi			; enter the monitor (mainloop)
@@ -232,27 +238,46 @@ noscreen:	ldx #greetingmsg	; greetings!
 		lbsr ioputstr	; print the message
 badexitloop:	bra badexitloop		; loop on the spot
 
+; dummy interupt handler for a peripheral - do nothing
+
+handlenothing:	rts
+
 ; fast irq routine - dispatch to device handlers
 
 firqinterrupt:	pshs a
-		lda IRQSTATUS
-		bita #IRQ88C681
-		beq timerhandlergo
-		bra firqinterrupto
-firqinterrupto:	puls a
+		lda FIRQFILTER
+		bsr allinterrupts
+		puls a
 		rti
-timerhandlergo:	lbsr timerhandler
-		bra firqinterrupto
 
-; irq service routine - dispatch to device handlers
+irqinterrupt:	lda IRQFILTER
+		bsr allinterrupts
+		rti
 
-irqinterrupt:	lda IRQSTATUS
+allinterrupts:	coma
+		ora IRQSTATUS
+		bita #IRQDS3234
+		beq handleds3234go
+		bita #IRQ65SPI
+		beq handle65spigo
 		bita #IRQ65C22
-		beq keyhandlergo
-		bra irqinterrupto
-irqinterrupto:	rti
-keyhandlergo:	lbsr keyhandler
-		bra irqinterrupto
+		beq handle65c22go
+		bita #IRQVDC
+		beq handlevdcgo
+		bita #IRQ88C681
+		beq handle88c681go
+		rts
+
+handleds3234go:	jsr [handleds3234]
+		rts
+handle65spigo:	jsr [handle65spi]
+		rts
+handle65c22go:	jsr [handle65c22]
+		rts
+handlevdcgo:	jsr [handlevdc]
+		rts
+handle88c681go:	jsr [handle88c681]
+		rts
 
 ; monitor entry point
 
@@ -898,7 +923,7 @@ playaymemory:	ldx ,y++
 playaydirect:	tfr y,x
 		bra playaynow
 
-playaynow:	lbsr ay8910playtune
+playaynow:	lbsr ayplaytune
 		clra
 		rts
 
@@ -1200,7 +1225,7 @@ verflash:	lda ,u+			; get the byte
 		.include 'serial.asm'
 		.include 'strings.asm'
 		.include 'misc.asm'
-		.include 'ay8910.asm'
+		.include 'ay.asm'
 		.include 'disassembly.asm'
 		.include 'font.asm'
 		.include 'v99.asm'

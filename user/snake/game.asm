@@ -161,7 +161,8 @@ docollision:	cmpa #FOODTILE		; food for the nake?
 		clra			; zero means deathh
 docollisiono:	rts
 
-yumyum:		inc snakelength,pcr	; snake grows as it eats
+yumyum:		lbsr munchmunch
+		inc snakelength,pcr	; snake grows as it eats
 		lbsr placenewfood	; put some new food down
 		ldx movementdelay,pcr	; get current snake speed
 		leax -0x0040,x		; at 120 food it will be max speed 
@@ -221,7 +222,7 @@ moveupdown:	cmpa rowdirection,pcr
 		sta rowdirection,pcr
 		bra controlsnakeo
 
-randominit:	lda uptimel+1
+randominit:	lda #42
 		sta randomseed
 		rts
 

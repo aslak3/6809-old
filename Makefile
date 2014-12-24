@@ -1,8 +1,8 @@
 UPLOAD = $(HOME)/8bitcomputer/eepromprogrammer/upload/upload
 FLASHER = ./flasher/flasher
 
-PROG_SERIAL = /dev/ttyUSB1
-6809_SERIAL = /dev/ttyUSB0
+PROG_SERIAL = /dev/ttyUSB0
+6809_SERIAL = /dev/ttyUSB1
 
 BIN = monitor.bin
 MAP = monitor.map
@@ -10,7 +10,7 @@ INC = monitor.inc
 
 MONITOR_ASM = monitor.asm
 ASMS = jumptable.asm misc.asm ramvars.asm storage.asm spi.asm serial.asm \
-	strings.asm ay8910.asm disassembly.asm font.asm v99.asm keyboard.asm \
+	strings.asm ay.asm disassembly.asm font.asm v99.asm keyboard.asm \
 	timer.asm io.asm terminal.asm
 
 INCS = hardware.inc

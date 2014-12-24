@@ -39,8 +39,11 @@ linecalcnext:	sty ,x++
 
 		; for the keyboard
 
-		; via interrupt routing
+		; via interrupt handler
+		ldx #keyhandler
+		stx handle65c22
 
+		; via interrupt routing
 		lda IRQFILTER
 		ora #IRQ65C22
 		sta IRQFILTER

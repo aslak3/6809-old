@@ -10,8 +10,11 @@ timerinit:	lda #0b01110000		; tick on the 3.684Mhz crystal / 16
 		sta CTL88681		; 4605 decimal - 25/sec
 		lda STARTCT88681	; update the timer overflow
 
-		; interrupt register
+		; interrupt handler
+		ldx #timerhandler
+		stx handle88c681
 
+		; interrupt register
 		lda FIRQFILTER		; get current value
 		ora #IRQ88C681		; or in the duart line
 		sta FIRQFILTER		; for the duart timer interrupt

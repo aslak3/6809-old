@@ -10,17 +10,23 @@
 		ldu #USERSTACKEND	; setup the user stack
 
 		lbsr videoinit
+		lbsr soundinit
 
 menu:		lbsr clearscreen
 
-		lda #11
-		ldb #6
+		lda #9
+		ldb #2
 		leax pressfire,pcr
 		lbsr printstrat
 
-		lda #13
-		ldb #6
+		lda #11
+		ldb #2
 		leax orexit,pcr
+		lbsr printstrat
+
+		lda #13
+		ldb #2
+		leax orcalibrate,pcr
 		lbsr printstrat
 
 menupollloop:	jsr jreadjoystick
@@ -28,10 +34,16 @@ menupollloop:	jsr jreadjoystick
 		bne startgame
 		bita #JOYUP
 		bne exit
+		bita #JOYDOWN
+		bne startcalibrate
 
 		bra menupollloop
 
 startgame:	lbsr game
+
+		bra menu
+
+startcalibrate:	lbsr calibrate
 
 		bra menu
 
@@ -41,6 +53,10 @@ pressfire:	.asciz 'Press FIRE to start'
 
 orexit:		.asciz 'Or UP to exit'
 
+orcalibrate:	.asciz 'Or DOWN to calibrate screen'
+
 		.include 'game.asm'
 		.include 'graphics.asm'
 		.include 'video.asm'
+		.include 'sound.asm'
+		.include 'calibrate.asm'

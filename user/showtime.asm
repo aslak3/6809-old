@@ -37,7 +37,7 @@ showtime:	lds #USERSTACKEND
 		leax outputbuffer,pcr	; reset x for printing
 
 		pshs y
-		jsr jserialputstr	; print the time followed by space
+		jsr jioputstr	; print the time followed by space
 		puls y
 
 		lda 3,y			; get days (1-7)
@@ -48,7 +48,7 @@ showtime:	lds #USERSTACKEND
 		leax a,x		; add on the offset from above
 
 		pshs y
-		jsr jserialputstr	; output the day
+		jsr jioputstr	; output the day
 		puls y
 
 		leax outputbuffer,pcr	; back in the ram buffer
@@ -68,11 +68,11 @@ showtime:	lds #USERSTACKEND
 		sta ,x+			; add it
 		leax outputbuffer,pcr	; reset output buffer
 
-		jsr jserialputstr	; output the date ( DD/MM/YY)
+		jsr jioputstr	; output the date ( DD/MM/YY)
 
 		leax newlinemsg,pcr
 
-		jsr jserialputstr	; and add a newline
+		jsr jioputstr	; and add a newline
 		
 		swi			; back to monitor
 

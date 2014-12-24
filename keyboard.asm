@@ -94,12 +94,12 @@ shifttab:
 
 ; column a
 
-		.ascii '!'			; column a
-		.byte 0				; left arrow
-		.byte 0				; control
-		.byte 0				; run/stop
+		.ascii '!'		; column a
+		.byte 0			; left arrow
+		.byte 0			; control
+		.byte 0			; run/stop
 		.ascii ' '
-		.byte 0				; commodore
+		.byte 0			; commodore
 		.ascii 'Q'
 		.ascii '"'
 
@@ -108,7 +108,7 @@ shifttab:
 		.ascii '#'
 		.ascii 'W'
 		.ascii 'A'
-		.byte 0				; left shift
+		.byte 0			; left shift
 		.ascii 'Z'
 		.ascii 'S'
 		.ascii 'E'
@@ -181,12 +181,14 @@ shifttab:
 		.byte 0			; f7
 
 keyhandler:	lda PORTA6522
+		cmpa #0xff
+		beq keyhandlero
 		ldb keyrawmode
 		tstb
 		beq asciimode
 		ldx #keybuffer
 		bsr keypushbuf
-		rts
+keyhandlero:	rts
 
 asciimode:	bita #0x80
 		beq keydown

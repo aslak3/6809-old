@@ -44,7 +44,7 @@ vsetcoloursn:	bsr vsetcolour		; sets this colour
 ; sets up "core" registers
 
 vinit:		loadconstreg VBANKREG, 0x00
-		loadconstreg VDISPLAYPOSREG, 0x0e
+		loadconstreg VDISPLAYPOSREG, 0x08
 		loadconstreg VDISPLAYOFFREG, 0x00
 		loadconstreg VINTLINEREG, 0x00
 
@@ -88,7 +88,7 @@ vreadnext:	lda VPORT0
 		puls y
 		rts
 
-; prepare the vdc for reading or writing from y in vram. a is 1 for writing
+; prepare the vdc for reading or writing from y in vram
 
 vseekcommon:	tfr y,d
 		lsra

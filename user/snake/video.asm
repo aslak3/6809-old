@@ -4,7 +4,7 @@ videoinit:	jsr jvinit		; do the core init, clear vram
 
 		; graphics mode 1 - 32x24, 8x8 tiles
 		loadconstreg VMODE0REG, 0b00000000
-		loadconstreg VMODE1REG, 0b01000000
+		loadconstreg VMODE1REG, 0b01100000
 		loadconstreg VMODE2REG, 0b00001000
 		loadconstreg VMODE3REG, 0b00000010
 
@@ -17,6 +17,15 @@ videoinit:	jsr jvinit		; do the core init, clear vram
 		loadconstreg VCOLBASEHREG, 0x01
 		; hack
 		loadconstreg VDISPLAYPOSREG, 0x08
+
+		leax vdchandler,pcr
+		stx handlevdc
+
+;		lda IRQFILTER
+;		ora #IRQVDC
+;		sta IRQFILTER
+
+		clr vcounter
 
 		leax printattab,pcr	; prepae lookup table of row->vram
 		ldy #0x8000		; vram starts at 0x8000
@@ -202,8 +211,14 @@ leftborder:	lbsr stampat
 
 		rts
 
+vdchandler:	getstatusreg #0
+		inc vcounter,pcr
+		rts
+
+
 ; Variables
 
 printattab:	.rmb 2*24
 stamp:		.rmb 1
 peek:		.rmb 1
+vcounter:	.rmb 1

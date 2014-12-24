@@ -16,41 +16,41 @@ clear:		clr ,x+
 		sta ,y
 
 		leax promptmsg,pcr
-		jsr jserialputstr
+		jsr jioputstr
 
 		leax hourmsg,pcr
-		jsr jserialputstr
-		jsr jserialgetbyte
+		jsr jioputstr
+		jsr jiogetbyte
 		sta 3,y
 
 		leax minmsg,pcr
-		jsr jserialputstr
-		jsr jserialgetbyte
+		jsr jioputstr
+		jsr jiogetbyte
 		sta 2,y
 
 		leax secmsg,pcr
-		jsr jserialputstr
-		jsr jserialgetbyte
+		jsr jioputstr
+		jsr jiogetbyte
 		sta 1,y
 
 		leax daymsg,pcr
-		jsr jserialputstr
-		jsr jserialgetbyte
+		jsr jioputstr
+		jsr jiogetbyte
 		sta 5,y
 
 		leax monthmsg,pcr
-		jsr jserialputstr
-		jsr jserialgetbyte
+		jsr jioputstr
+		jsr jiogetbyte
 		sta 6,y
 
 		leax yearmsg,pcr
-		jsr jserialputstr
-		jsr jserialgetbyte
+		jsr jioputstr
+		jsr jiogetbyte
 		sta 7,y
 
 		leax dayofweekmsg,pcr
-		jsr jserialputstr
-		jsr jserialgetbyte
+		jsr jioputstr
+		jsr jiogetbyte
 		sta 4,y
 
 		lda #0xfe
