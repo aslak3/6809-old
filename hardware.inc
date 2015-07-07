@@ -196,6 +196,12 @@ SPICONTROL	.equ SPIBASE+0x1
 SPIDIV		.equ SPIBASE+0x2
 SPISS		.equ SPIBASE+0x3
 
+;;; buzzer
+
+BUZZERBASE	.equ 0x9002
+BUZZERTONE	.equ BUZZERBASE
+BUZZERDURATION	.equ BUZZERBASE+1
+
 ;;; cpld registers
 
 ; ide high byte latch
@@ -227,11 +233,13 @@ IRQSTATUS	.equ 0xa600
 
 ; irq bits
 
-IRQDS3234	.equ 0x01
+;;IRQDS3234	.equ 0x01
 IRQ65SPI	.equ 0x02
 IRQ65C22	.equ 0x04
 IRQVDC		.equ 0x08
 IRQ88C681	.equ 0x10
+
+IRQBUZZER	.equ 0x01
 
 ; memory
 

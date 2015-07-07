@@ -11,6 +11,7 @@ handle65spi::	.rmb 2
 handle65c22::	.rmb 2
 handlevdc::	.rmb 2
 handle88c681::	.rmb 2
+handlebuzzer::	.rmb 2
 
 ; the current open channel
 
@@ -82,3 +83,5 @@ tlinestarts:	.rmb 2*25
 trow:		.rmb 1
 tcol:		.rmb 1
 tscrollline:	.rmb 80
+
+buzzerpointer:	.rmb 2

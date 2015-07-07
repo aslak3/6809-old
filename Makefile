@@ -11,7 +11,7 @@ INC = monitor.inc
 MONITOR_ASM = monitor.asm
 ASMS = jumptable.asm misc.asm ramvars.asm storage.asm spi.asm serial.asm \
 	strings.asm ay.asm disassembly.asm font.asm v99.asm keyboard.asm \
-	timer.asm io.asm terminal.asm
+	timer.asm io.asm terminal.asm buzzer.asm
 
 INCS = hardware.inc
 

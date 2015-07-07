@@ -124,6 +124,8 @@ commandarray:	.word dumpmemory
 		.ascii 'K'
 		.word showstick
 		.ascii 'j'
+		.word playbuzzer
+		.ascii 'P'
 		.word 0x0000
 		.byte NULL
 
@@ -172,13 +174,15 @@ init:		clr IRQFILTER		; clear interrupt regs
 		stx handle65c22
 		stx handlevdc
 		stx handle88c681
+		stx handlebuzzer
 
 		clr keyreadpointer
 		clr keywritepointer
 		lbsr serialinit		; setup the serial port
-		lbsr spiinit		; prepare the SPI
-		lbsr terminit
-		lbsr timerinit
+;		lbsr spiinit		; prepare the SPI
+;		lbsr terminit
+;		lbsr timerinit
+		lbsr buzzerinit
 
 		lbsr serialactive
 
@@ -207,13 +211,13 @@ romcopy:	lda ,x+			; read in
 		leax ROMCOPYSTART,x	; offset it forward where it now is 
 		jmp ,x			; jump to the new location of flasher
 
-normalstart:	lbsr tactive
+normalstart:	;lbsr tactive
 
 noscreen:	ldx #greetingmsg	; greetings!
 		lbsr ioputstr		; output the greeting
 
-		ldx #bootbeeps
-		lbsr ayplaytune	; play booting beeps
+;		ldx #bootbeeps
+;		lbsr ayplaytune	; play booting beeps
 
 		lda #0x20		; beep frequency
 		sta SOUNDER		; set the beeper beeping
@@ -256,8 +260,8 @@ irqinterrupt:	lda IRQFILTER
 
 allinterrupts:	coma
 		ora IRQSTATUS
-		bita #IRQDS3234
-		beq handleds3234go
+;;		bita #IRQDS3234
+;;		beq handleds3234go
 		bita #IRQ65SPI
 		beq handle65spigo
 		bita #IRQ65C22
@@ -266,6 +270,8 @@ allinterrupts:	coma
 		beq handlevdcgo
 		bita #IRQ88C681
 		beq handle88c681go
+		bita #IRQBUZZER
+		beq handlebuzzergo
 		rts
 
 handleds3234go:	jsr [handleds3234]
@@ -277,6 +283,8 @@ handle65c22go:	jsr [handle65c22]
 handlevdcgo:	jsr [handlevdc]
 		rts
 handle88c681go:	jsr [handle88c681]
+		rts
+handlebuzzergo:	jsr [handlebuzzer]
 		rts
 
 ; monitor entry point
@@ -1163,6 +1171,21 @@ testreg:	lbsr parseinput		; parse hexes, filling out inputbuffer
 
 		rts
 
+playbuzzer:	lbsr parseinput
+
+		lda ,y+			; get the type
+		cmpa #2			; word?
+		lbne generalerror	; validation error
+		ldy ,y			; this is the inode number
+		ldd ,y++
+		sty buzzerpointer
+
+		sta BUZZERTONE
+		stb BUZZERDURATION
+
+		clra
+
+		rts
 
 ;;; END OF HIGH LEVEL COMMANDS
 
@@ -1233,3 +1256,4 @@ verflash:	lda ,u+			; get the byte
 		.include 'timer.asm'
 		.include 'io.asm'
 		.include 'terminal.asm'
+		.include 'buzzer.asm'

@@ -98,6 +98,7 @@ bytetoaschex:	pshs a			; save original input byte
 		bsr nibtoaschex		; convert the low nibble
 		puls a			; get the original input back
 		bsr nibtoaschex		; convert the high nibble
+		clr ,x
 		rts
 
 ; wordtoaschex - convert a word in d to four characters in x, advancing it
@@ -106,6 +107,7 @@ wordtoaschex:	pshs b			; save low byte
 		bsr bytetoaschex	; output high byte
 		puls a			; restore low byte
 		bsr bytetoaschex	; and output low byte
+		clr ,x
 		rts
 
 ; jump x across spaces
