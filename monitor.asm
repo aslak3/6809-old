@@ -126,6 +126,10 @@ commandarray:	.word dumpmemory
 		.ascii 'j'
 		.word playbuzzer
 		.ascii 'P'
+		.word waiter
+		.ascii 'W'
+		.word opl2play
+		.ascii 'O'
 		.word 0x0000
 		.byte NULL
 
@@ -181,8 +185,8 @@ init:		clr IRQFILTER		; clear interrupt regs
 		lbsr serialinit		; setup the serial port
 ;		lbsr spiinit		; prepare the SPI
 ;		lbsr terminit
-;		lbsr timerinit
-		lbsr buzzerinit
+		lbsr timerinit
+;		lbsr buzzerinit
 
 		lbsr serialactive
 
@@ -1186,6 +1190,86 @@ playbuzzer:	lbsr parseinput
 		clra
 
 		rts
+
+waiter:		lbsr parseinput
+
+		lda ,y+			; get the type
+		cmpa #2			; word?
+		lbne generalerror	; validation error
+
+		ldx ,y
+
+		lbsr timerwait
+
+		clra
+
+		rts
+
+opl2play:	lbsr parseinput
+
+		lda ,y+
+		cmpa #2
+		lbne generalerror
+
+		ldy ,y
+
+		leay 8+2+2+4+4+4,y
+
+opl2playloop:	lda ,y+
+
+opl2play0:	cmpa #0
+		bne opl2play1
+		ldb ,y+
+		beq opl2playout
+		clra
+		lsra
+		rorb
+		lsra
+		rorb
+		tfr d,x
+		leax 1,x
+		lbsr timerwait
+		bra opl2playloop
+
+opl2play1:	cmpa #1
+		bne opl2play2
+		ldd ,y++
+		exg a,b
+		lsra
+		rorb
+		lsra
+		rorb
+		tfr d,x
+		lbsr timerwait
+		bra opl2playloop
+
+opl2play2:	cmpa #2
+		bne opl2playother
+		lda ,x+
+
+opl2play3:	cmpa #3
+		bne opl2playother
+		lda ,x+
+
+opl2play4:	cmpa #4
+		bne opl2playother
+		lda ,x+
+
+opl2playother:	sta 0x9000
+		nop
+		lda ,y+
+		sta 0x9001
+		nop
+		nop
+		nop
+		nop
+
+		bra opl2playloop
+
+opl2playout:	clra
+
+		rts
+
 
 ;;; END OF HIGH LEVEL COMMANDS
 

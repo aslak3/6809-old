@@ -131,7 +131,7 @@ int flashfile(FILE *serialfp, char *filename)
 
 	if (strcmp(gomarker, "+++") != 0)
 	{
-		fprintf(stderr, "Did not get go signal to start flashing\n");
+		fprintf(stderr, "Did not get go signal to start flashing [%s]\n", gomarker);
 		return 1;
 	}
 	

@@ -1,8 +1,8 @@
 UPLOAD = $(HOME)/8bitcomputer/eepromprogrammer/upload/upload
 FLASHER = ./flasher/flasher
 
-PROG_SERIAL = /dev/ttyUSB0
-6809_SERIAL = /dev/ttyUSB1
+PROG_SERIAL = /dev/ttyUSB1
+6809_SERIAL = /dev/ttyUSB0
 
 BIN = monitor.bin
 MAP = monitor.map

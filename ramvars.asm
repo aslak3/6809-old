@@ -62,6 +62,8 @@ timeoutput:	.rmb 8
 uptimeh:	.rmb 2
 uptimel:	.rmb 2
 
+timer:		.rmb 2
+
 idescratchsec:	.rmb 512
 firstpartsects:	.rmb 2
 startofinodes:	.rmb 2
