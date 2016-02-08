@@ -1,29 +1,29 @@
 ;;; SPI
 
 spiinit:	lda #0x01		; CPOL=0 and CPHA=1, which is
-		sta SPICONTROL		; needed by the DS1305
+;		sta SPICONTROL		; needed by the DS1305
 		lda #0x02		; div=2, which is E by 4
-		sta SPIDIV
+;		sta SPIDIV
 		lda #0xff		; "disable" the SS outputs
-		sta SPISS
+;		sta SPISS
 		rts
 
 ;;; SPI low level routines
 
-spistart:	sta SPISS
+spistart:;	sta SPISS
 		nop
 		rts
 
 spistop:	lda #0xff		; deassert chip select
-		sta SPISS
+;		sta SPISS
 		nop
 		rts
 
 ; spiwrite - send the byte in b
 
-spiwrite:	stb SPIDATAOUT
+spiwrite:	;stb SPIDATAOUT
 		
-writeloop:	tst SPISTATUS
+writeloop:	;tst SPISTATUS
 		bpl writeloop
 
 		rts
@@ -31,9 +31,9 @@ writeloop:	tst SPISTATUS
 ; spiwriteblock - sends y bytes from x
 
 spiwriteblock:	ldb ,x+
-		stb SPIDATAOUT
+		;stb SPIDATAOUT
 
-writeblockloop:	tst SPISTATUS
+writeblockloop:	;tst SPISTATUS
 		bpl writeblockloop
 
 		leay -1,y
@@ -43,23 +43,23 @@ writeblockloop:	tst SPISTATUS
 
 ; spiread - read the next spi byte into b
 
-spiread:	clr SPIDATAOUT
+spiread:	;clr SPIDATAOUT
 
-readloop:	tst SPISTATUS
+readloop:	;tst SPISTATUS
 		bpl readloop
 
-		ldb SPIDATAIN
+		;ldb SPIDATAIN
 
 		rts
 
 ; spireadblock - read y bytes into the buffer starting at x
 
-spireadblock:	clr SPIDATAOUT
+spireadblock:	;clr SPIDATAOUT
 
-readblockloop:	tst SPISTATUS
+readblockloop:	;tst SPISTATUS
 		bpl readblockloop
 
-		ldb SPIDATAIN
+		;ldb SPIDATAIN
 		stb ,x+
 
 		leay -1,y

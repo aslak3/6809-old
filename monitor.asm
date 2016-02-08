@@ -45,8 +45,7 @@
 
 ; START OF GLOBAL READ-ONLY DATA
 
-greetingmsg:	.asciz '\r\n6809 Monitor v0.4\r\n\r\n'
-youtypedmsg:	.asciz 'You typed: '
+greetingmsg:	.asciz '\r\n6809 Monitor v0.6 for MAXI09\r\n\r\n'
 promptmsg:	.asciz 'Monitor: > '
 nosuchmsg:	.asciz 'No such command\r\n'
 commfailedmsg:	.asciz 'Command failed, possibly bad syntax\r\n'
@@ -76,10 +75,6 @@ commandarray:	.word dumpmemory
 		.ascii 'u'
 		.word resetuptime
 		.ascii 'U'
-		.word latchout
-		.ascii 'c'
-		.word latchin
-		.ascii 'C'
 		.word spistore
 		.ascii '+'
 		.word ideidentify
@@ -98,20 +93,16 @@ commandarray:	.word dumpmemory
 		.ascii 'f'
 		.word listdirbyinode
 		.ascii 'l'
-		.word playay
-		.ascii 'p'
 		.word xmodem
 		.ascii 'x'
 		.word disassemble
 		.ascii 's'
 		.word parsetest
 		.ascii 'z'
-		.word setbank
-		.ascii 'b'
-		.word getbank
-		.ascii 'B'
 		.word readbyte
 		.ascii 'R'
+		.word readkeyboard
+		.ascii 'k'
 		.word testvramread
 		.ascii 'L'
 		.word testvramwrite
@@ -122,12 +113,6 @@ commandarray:	.word dumpmemory
 		.ascii 'V'
 		.word testreg
 		.ascii 'K'
-		.word showstick
-		.ascii 'j'
-		.word playbuzzer
-		.ascii 'P'
-		.word waiter
-		.ascii 'W'
 		.word opl2play
 		.ascii 'O'
 		.word 0x0000
@@ -139,54 +124,16 @@ bootbeeps:	.asciz 'abcdefg'
 
 ; setup stack to the end of ram so it can go grown backwards
 
-memerror:	lda #0x80
-		sta SOUNDER		; change tone
-memerrorloop:	bra memerrorloop		
+reset:		lds #STACKEND+1
 
-reset:		lda #0x10
-		sta SOUNDER
+		lda #0xff		; clear all the interrupt routes
+		sta NMISOURCESR
+		sta IRQSOURCESR
+		sta FIRQSOURCESR
 
-		lda #0x04
-
-nextbank:	deca
-		sta BANKLATCH
-		ldx #HIRAMSTART
-
-nextbyte:	clr ,x
-		tst ,x+
-		bne memerror
-
-		cmpx #HIRAMEND+1
-		bne nextbyte
-
-		tsta
-		bne nextbank
-
-		lda #0x01
-		sta BANKLATCH
-
-		lds #STACKEND+1		; setup hardware stack
-
-		clr SOUNDER
-
-init:		clr IRQFILTER		; clear interrupt regs
-		clr FIRQFILTER		; they will be init'd in inits
-
-		ldx #handlenothing
-		stx handleds3234
-		stx handle65spi
-		stx handle65c22
-		stx handlevdc
-		stx handle88c681
-		stx handlebuzzer
-
-		clr keyreadpointer
-		clr keywritepointer
-		lbsr serialinit		; setup the serial port
-;		lbsr spiinit		; prepare the SPI
-;		lbsr terminit
-		lbsr timerinit
-;		lbsr buzzerinit
+		lbsr uartinit		; uart interrupt routing
+		lbsr serialinit		; setup the console serial port
+		lbsr terminit		; the terminal (video and keyboard)
 
 		lbsr serialactive
 
@@ -215,27 +162,20 @@ romcopy:	lda ,x+			; read in
 		leax ROMCOPYSTART,x	; offset it forward where it now is 
 		jmp ,x			; jump to the new location of flasher
 
-normalstart:	;lbsr tactive
+normalstart:	lbsr tactive
 
 noscreen:	ldx #greetingmsg	; greetings!
 		lbsr ioputstr		; output the greeting
 
-;		ldx #bootbeeps
-;		lbsr ayplaytune	; play booting beeps
-
-		lda #0x20		; beep frequency
-		sta SOUNDER		; set the beeper beeping
+		lda #0xff		; led on
+		sta LED
 		ldy #0xd000		; small delay
 		lbsr delay
 
-		lda #0x10		; higher pitched noise
-		sta SOUNDER		; more beeps
-		ldy #0x7000		; shorter delay
-		lbsr delay
-		
-		clr SOUNDER		; silence the beeper
+		clra
+		sta LED			; led off
 
-		enableinterrupts	; enable interrupts
+		enableinterrupts
 
 		swi			; enter the monitor (mainloop)
 
@@ -243,53 +183,29 @@ noscreen:	ldx #greetingmsg	; greetings!
 ; the return address - print error and loop
 
 		ldx #badexitmsg		; if we get here then setup a msg
-		lbsr ioputstr	; print the message
+		lbsr ioputstr		; print the message
 badexitloop:	bra badexitloop		; loop on the spot
 
 ; dummy interupt handler for a peripheral - do nothing
 
 handlenothing:	rts
 
-; fast irq routine - dispatch to device handlers
+; irq routine - dispatch to device handlers
 
 firqinterrupt:	pshs a
-		lda FIRQFILTER
+		lda ACTIVEFIRQ
 		bsr allinterrupts
 		puls a
 		rti
 
-irqinterrupt:	lda IRQFILTER
+irqinterrupt:	lda ACTIVEIRQ
 		bsr allinterrupts
 		rti
 
-allinterrupts:	coma
-		ora IRQSTATUS
-;;		bita #IRQDS3234
-;;		beq handleds3234go
-		bita #IRQ65SPI
-		beq handle65spigo
-		bita #IRQ65C22
-		beq handle65c22go
-		bita #IRQVDC
-		beq handlevdcgo
-		bita #IRQ88C681
-		beq handle88c681go
-		bita #IRQBUZZER
-		beq handlebuzzergo
-		rts
-
-handleds3234go:	jsr [handleds3234]
-		rts
-handle65spigo:	jsr [handle65spi]
-		rts
-handle65c22go:	jsr [handle65c22]
-		rts
-handlevdcgo:	jsr [handlevdc]
-		rts
-handle88c681go:	jsr [handle88c681]
-		rts
-handlebuzzergo:	jsr [handlebuzzer]
-		rts
+allinterrupts:	bita #INTUART
+		beq doneuart
+		jsr [handleuart]
+doneuart:	rts
 
 ; monitor entry point
 
@@ -432,7 +348,20 @@ writememory:	lbsr parseinput		; parse hexes, filling out inputbuffer
 		cmpa #2			; is it a word?
 		lbne generalerror	; validation error
 		ldx ,y++		; start address
-nextwrite:	lda ,y+			; get the type
+nextwrite:	nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		lda ,y+			; get the type
 		beq writememoryout	; that's the end of the byte list
 		cmpa #1			; is it a byte?
 		beq writebyte		; yes, so process bytes
@@ -544,7 +473,6 @@ helpmsg:	.ascii 'Commands:\r\n'
 		.ascii '    RRRR bytes\r\n'
 		.ascii '  u : show uptime\r\n'
 		.ascii '  U : clear uptime counter\r\n'
-		.ascii '  c OO : output OO on the latch\r\n'
 		.ascii '  m : set 8bit ide and read mbr\r\n'
 		.ascii '  y : send ide identify command and show basic info\r\n'
 		.ascii '  { MMMM NNNN : read 1k disk block NNNN into MMMM\r\n'
@@ -554,9 +482,7 @@ helpmsg:	.ascii 'Commands:\r\n'
 		.ascii '  i IIII ; show info about inode IIII\r\n'
 		.ascii '  f MMMM IIII : read file(etc) at inode IIII into MMMM\r\n'
 		.ascii '  x MMMM : receive file over XMODEM starting at MMMM\r\n'
-		.ascii '  p MMMM or p "STRING" : play notes at MMMM or STRING\r\n'
-		.ascii '  b BB : set the memory bank to BB\r\n'
-		.ascii '  B : show the current memory bank\r\n'
+		.ascii '  k : test keyboard\r\n'
 		.ascii '  h or ? : this help\r\n'
 		.asciz '\r\n'
 
@@ -591,31 +517,6 @@ resetuptime:	clra			; reset uptime
 		clrb			; both bytes
 		std uptimeh		; and store high word
 		std uptimel		; and low word
-		clra
-		rts
-
-; latchout - "c OO" outputs a byte on the "latch"
-
-latchout:	lbsr parseinput		; parse the input
-		lda ,y+			; get the type
-		cmpa #1			; see if it is a byte
-		lbne generalerror	; if not then validation error
-
-		lda ,y+			; get the byte itself
-;		sta LATCH		; output the byte on the latch leds
-
-		clra
-		rts
-
-latchin:	;lda LATCH
-		ldx #outputbuffer
-		lbsr bytetoaschex
-		clr ,x+
-		ldx #outputbuffer
-		lbsr ioputstr
-		ldx #newlinemsg
-		lbsr ioputstr
-
 		clra
 		rts
 
@@ -919,26 +820,6 @@ listdirnotdir:	ldx #notdirmsg
 		lda #1
 		rts
 
-playay:		lbsr parseinput
-
-		lda ,y+
-		cmpa #2
-		beq playaymemory
-		cmpa #3
-		beq playaydirect
-		lda #1
-		rts
-
-playaymemory:	ldx ,y++
-		bra playaynow
-
-playaydirect:	tfr y,x
-		bra playaynow
-
-playaynow:	lbsr ayplaytune
-		clra
-		rts
-
 ; x MMMM - read a xmodem upload into memory starting at MMMM
 
 xmodem:		lbsr parseinput
@@ -1066,32 +947,6 @@ stringfound:	ldx #stringfoundmsg
 		lbsr ioputstr
 		bra parsetestloop		
 
-; b BB - set memory bank
-
-setbank:	lbsr parseinput
-		lda ,y+
-		cmpa #1			; is it a word?
-		lbne generalerror	; validation error
-
-		lda ,y+
-		sta BANKLATCH
-
-		clra
-		rts
-
-; B - show the membory bank
-
-getbank:	lda BANKLATCH
-		ldx #outputbuffer
-		lbsr bytetoaschex
-		clr ,x+
-		ldx #outputbuffer
-		lbsr ioputstr
-		ldx #newlinemsg
-		lbsr ioputstr
-		clra
-		rts
-
 readbyte:	lbsr parseinput
 		lda ,y+
 		cmpa #2			; is it a word?
@@ -1110,7 +965,13 @@ readbyte:	lbsr parseinput
 		clra
 		rts
 
-showstick:	lbsr readjoystick
+readkeyboard:	lda LSRPD16C654		; get status
+		anda #0b0000001		; input empty?
+		beq readkeyboard	; go back and look again
+		lda RHRPD16C654		; get the char into a
+
+		cmpa #0x2d
+		beq readkeyboardo
 
 		ldx #outputbuffer
 		lbsr bytetoaschex
@@ -1119,7 +980,9 @@ showstick:	lbsr readjoystick
 		lbsr ioputstr
 		ldx #newlinemsg
 		lbsr ioputstr
-		clra
+		bra readkeyboard
+
+readkeyboardo:	clra
 		rts
 
 testvramread:	lbsr parseinput		; parse hexes, filling out inputbuffer
@@ -1175,36 +1038,6 @@ testreg:	lbsr parseinput		; parse hexes, filling out inputbuffer
 
 		rts
 
-playbuzzer:	lbsr parseinput
-
-		lda ,y+			; get the type
-		cmpa #2			; word?
-		lbne generalerror	; validation error
-		ldy ,y			; this is the inode number
-		ldd ,y++
-		sty buzzerpointer
-
-		sta BUZZERTONE
-		stb BUZZERDURATION
-
-		clra
-
-		rts
-
-waiter:		lbsr parseinput
-
-		lda ,y+			; get the type
-		cmpa #2			; word?
-		lbne generalerror	; validation error
-
-		ldx ,y
-
-		lbsr timerwait
-
-		clra
-
-		rts
-
 opl2play:	lbsr parseinput
 
 		lda ,y+
@@ -1228,7 +1061,7 @@ opl2play0:	cmpa #0
 		rorb
 		tfr d,x
 		leax 1,x
-		lbsr timerwait
+;		lbsr timerwait
 		bra opl2playloop
 
 opl2play1:	cmpa #1
@@ -1240,7 +1073,7 @@ opl2play1:	cmpa #1
 		lsra
 		rorb
 		tfr d,x
-		lbsr timerwait
+;		lbsr timerwait
 		bra opl2playloop
 
 opl2play2:	cmpa #2
@@ -1332,12 +1165,12 @@ verflash:	lda ,u+			; get the byte
 		.include 'serial.asm'
 		.include 'strings.asm'
 		.include 'misc.asm'
-		.include 'ay.asm'
 		.include 'disassembly.asm'
 		.include 'font.asm'
 		.include 'v99.asm'
 		.include 'keyboard.asm'
-		.include 'timer.asm'
+;		.include 'timer.asm'
 		.include 'io.asm'
 		.include 'terminal.asm'
-		.include 'buzzer.asm'
+;		.include 'buzzer.asm'
+		.include 'uart.asm'

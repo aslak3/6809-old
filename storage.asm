@@ -22,7 +22,7 @@ idellread:	ldy #512
 		lbsr idewaitnotbusy
 		lbsr idewaitfordata
 readwordloop:	lda IDEDATA
-		ldb IDEHIGH
+		ldb IDEDATA
 		std ,x++
 		leay -2,y
 		bne readwordloop
@@ -32,7 +32,7 @@ idellreadr:	ldy #512
 		lbsr idewaitnotbusy
 		lbsr idewaitfordata
 readwordloopr:	ldb IDEDATA
-		lda IDEHIGH
+		lda IDEDATA
 		std ,x++
 		leay -2,y
 		bne readwordloopr
@@ -41,7 +41,7 @@ readwordloopr:	ldb IDEDATA
 idellwrite:	ldy #512
 		lbsr idewaitnotbusy
 writewordloop:	ldd ,x++
-		stb IDEHIGH
+		stb IDEDATA
 		sta IDEDATA
 		leay -2,y
 		bne writewordloop

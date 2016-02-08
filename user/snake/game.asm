@@ -83,7 +83,7 @@ death:		dec lives,pcr		; down a life!
 		leax gameovermsg,pcr	; ...
 		lbsr printstrat		; ...
 
-gameoverloop:	jsr jreadjoystick	; read the joystick
+gameoverloop:	lbsr readjoystick	; read the joystick
 		bita #JOYFIRE1		; test for fire
 		beq gameoverloop	; not pressed? check again
 
@@ -161,8 +161,7 @@ docollision:	cmpa #FOODTILE		; food for the nake?
 		clra			; zero means deathh
 docollisiono:	rts
 
-yumyum:		lbsr munchmunch
-		inc snakelength,pcr	; snake grows as it eats
+yumyum:		inc snakelength,pcr	; snake grows as it eats
 		lbsr placenewfood	; put some new food down
 		ldx movementdelay,pcr	; get current snake speed
 		leax -0x0040,x		; at 120 food it will be max speed 
@@ -189,7 +188,7 @@ tryplaceagain:	lbsr randomnumber
 		lbsr stampat
 		rts
 
-controlsnake:	jsr jreadjoystick
+controlsnake:	lbsr readjoystick
 		bita #JOYLEFT
 		bne moveleft
 		bita #JOYRIGHT

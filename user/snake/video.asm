@@ -18,8 +18,8 @@ videoinit:	jsr jvinit		; do the core init, clear vram
 		; hack
 		loadconstreg VDISPLAYPOSREG, 0x08
 
-		leax vdchandler,pcr
-		stx handlevdc
+;		leax vdchandler,pcr
+;		stx handlevdc
 
 ;		lda IRQFILTER
 ;		ora #IRQVDC

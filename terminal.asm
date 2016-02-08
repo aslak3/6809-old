@@ -37,23 +37,7 @@ linecalcnext:	sty ,x++
 		clr trow
 		clr tcol
 
-		; for the keyboard
-
-		; via interrupt handler
-		ldx #keyhandler
-		stx handle65c22
-
-		; via interrupt routing
-		lda IRQFILTER
-		ora #IRQ65C22
-		sta IRQFILTER
-
-		; via handshaking etc
-
-		lda #0x08
-		sta PCR6522
-		lda #0x82
- 		sta IER6522
+		lbsr keyinit
 
 		rts
 

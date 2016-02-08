@@ -31,15 +31,9 @@ jfsreadfile::		jmp fsreadfile
 jdelay::		jmp delay
 jwordswap::		jmp wordswap
 
-jreadjoystick::		jmp readjoystick
-
 jvinit::		jmp vinit
 jvvread::		jmp vread
 jvwrite::		jmp vwrite
 jvseekcommon::		jmp vseekcommon
 jvseekread::		jmp vseekread
 jvseekwrite::		jmp vseekwrite
-
-jaystart::		jmp aystart
-jaystop::		jmp aystop
-jaystreamer::		jmp aystreamer

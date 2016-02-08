@@ -6,12 +6,14 @@
 
 ; interrupt handler routines
 
-handleds3234::	.rmb 2
-handle65spi::	.rmb 2
-handle65c22::	.rmb 2
-handlevdc::	.rmb 2
-handle88c681::	.rmb 2
-handlebuzzer::	.rmb 2
+handleuart:	.rmb 2
+
+; uart port handlers
+
+handleuartpa:	.rmb 2
+handleuartpb:	.rmb 2
+handleuartpc:	.rmb 2
+handleuartpd:	.rmb 2
 
 ; the current open channel
 
@@ -85,5 +87,3 @@ tlinestarts:	.rmb 2*25
 trow:		.rmb 1
 tcol:		.rmb 1
 tscrollline:	.rmb 80
-
-buzzerpointer:	.rmb 2

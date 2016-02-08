@@ -10,7 +10,7 @@
 		ldu #USERSTACKEND	; setup the user stack
 
 		lbsr videoinit
-		lbsr soundinit
+;		lbsr soundinit
 
 menu:		lbsr clearscreen
 
@@ -29,7 +29,7 @@ menu:		lbsr clearscreen
 		leax orcalibrate,pcr
 		lbsr printstrat
 
-menupollloop:	jsr jreadjoystick
+menupollloop:	lbsr readjoystick
 		bita #JOYFIRE1
 		bne startgame
 		bita #JOYUP
@@ -58,5 +58,9 @@ orcalibrate:	.asciz 'Or DOWN to calibrate screen'
 		.include 'game.asm'
 		.include 'graphics.asm'
 		.include 'video.asm'
-		.include 'sound.asm'
+;		.include 'sound.asm'
 		.include 'calibrate.asm'
+
+readjoystick:	lda JOYPORT0
+		coma
+		rts

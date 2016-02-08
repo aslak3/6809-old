@@ -2,187 +2,257 @@
 
 normaltab:
 
-; column a
+; row 0
 
-		.ascii '1'			; column a
-		.byte 0				; left arrow
-		.byte 0				; control
-		.byte 0				; run/stop
-		.ascii ' '
-		.byte 0				; commodore
-		.ascii 'q'
+		.byte 0				; escape
+		.byte 0				; unwired
+		.byte 0				; f1
+		.byte 0				; f2
+		.byte 0				; f3
+		.byte 0				; f4
+		.byte 0				; f5
+		.byte 0				; unwired
+
+		.byte 0				; f6
+		.byte 0				; blank
+		.byte 0				; f7
+		.byte 0				; f8
+		.byte 0				; f9
+		.byte 0				; f10
+		.byte 0				; help
+		.byte 0				; unused
+
+; row 1
+
+		.ascii '~'
+		.ascii '1'
 		.ascii '2'
-
-; column b
-
 		.ascii '3'
-		.ascii 'w'
-		.ascii 'a'
-		.byte 0				; left shift
-		.ascii 'z'
-		.ascii 's'
-		.ascii 'e'
 		.ascii '4'
-
-; column c
-
 		.ascii '5'
+		.ascii '6'
+		.ascii '7'
+
+		.ascii '8'
+		.ascii '9'
+		.ascii '0'
+		.ascii '-'
+		.ascii '='
+		.ascii '\'
+		.byte 0				; cursor up
+		.byte 0				; unused
+
+; row 2
+
+		.byte 0				; tab
+		.ascii 'q'
+		.ascii 'w'
+		.ascii 'e'
 		.ascii 'r'
+		.ascii 't'
+		.ascii 'y'
+		.ascii 'u'
+
+		.ascii 'i'
+		.ascii 'o'
+		.ascii 'p'
+		.ascii '['
+		.ascii ']'
+		.byte 0xff			; replaced: return
+		.byte 0				; cursor up
+		.byte 0				; unused
+
+; row 3
+
+		.byte 0				; caps lock
+		.ascii 'a'
+		.ascii 's'
 		.ascii 'd'
+		.ascii 'f'
+		.ascii 'g'
+		.ascii 'h'
+		.ascii 'j'
+
+		.ascii 'k'
+		.ascii 'l'
+		.ascii ';'
+		.ascii /'/
+		.byte 0				; blank
+		.byte 0xff			; delete
+		.byte 0				; cursor right
+		.byte 0				; unused
+
+; row 4
+
+		.byte 0				; blank
+		.ascii 'z'
 		.ascii 'x'
 		.ascii 'c'
-		.ascii 'f'
-		.ascii 't'
-		.ascii '6'
-
-; column d
-
-		.ascii '7'
-		.ascii 'y'
-		.ascii 'g'
 		.ascii 'v'
 		.ascii 'b'
-		.ascii 'h'
-		.ascii 'u'
-		.ascii '8'
-
-; column e
-
-		.ascii '9'
-		.ascii 'i'
-		.ascii 'j'
 		.ascii 'n'
 		.ascii 'm'
-		.ascii 'k'
-		.ascii 'o'
-		.ascii '0'
 
-; column f
-
-		.ascii '+'
-		.ascii 'p'
-		.ascii 'l'
 		.ascii ','
 		.ascii '.'
-		.ascii ':'
-		.ascii '@'
-		.ascii '-'
-
-; column g
-
-		.byte 0
-		.ascii '*'
-		.ascii ';'
 		.ascii '/'
-		.byte 0			; right shift
-		.ascii '='
-		.byte 0			; home
-		.byte 0
+		.byte 0				; unwired
+		.ascii ' '
+		.byte 0xff			; backspace
+		.byte 0				; cursor down
+		.byte 0				; unused
 
-; column h
+; row 5 (meta)
 
-		.byte 0xff		; replaced: delete
-		.byte 0xff		; replaced: return
-		.byte 0			; left/right
-		.byte 0			; up/down
-		.byte 0			; f1
-		.byte 0			; f3
-		.byte 0			; f5
-		.byte 0			; f7
+		.byte 0xff			; right shift
+		.byte 0				; right alt
+		.byte 0				; right amiga
+		.byte 0xff			; ctrl
+		.byte 0xff			; left shift
+		.byte 0				; left alt
+		.byte 0				; left amiga
 
 shifttab:
 
-; column a
+; row 0
 
-		.ascii '!'		; column a
-		.byte 0			; left arrow
-		.byte 0			; control
-		.byte 0			; run/stop
+		.byte 0				; escape
+		.byte 0				; unwired
+		.byte 0				; f1
+		.byte 0				; f2
+		.byte 0				; f3
+		.byte 0				; f4
+		.byte 0				; f5
+		.byte 0				; unwired
+
+		.byte 0				; f6
+		.byte 0				; blank
+		.byte 0				; f7
+		.byte 0				; f8
+		.byte 0				; f9
+		.byte 0				; f10
+		.byte 0				; help
+		.byte 0				; unused
+
+; row 1
+
+		.ascii '`'
+		.ascii '!'
+		.ascii '@'
 		.ascii ' '
-		.byte 0			; commodore
-		.ascii 'Q'
-		.ascii '"'
-
-; column b
-
-		.ascii '#'
-		.ascii 'W'
-		.ascii 'A'
-		.byte 0			; left shift
-		.ascii 'Z'
-		.ascii 'S'
-		.ascii 'E'
 		.ascii '$'
-
-; column c
-
 		.ascii '%'
-		.ascii 'R'
-		.ascii 'D'
-		.ascii 'X'
-		.ascii 'C'
-		.ascii 'F'
-		.ascii 'T'
+		.ascii '^'
 		.ascii '&'
 
-; column d
+		.ascii '*'
+		.ascii '('
+		.ascii ')'
+		.ascii '_'
+		.ascii '+'
+		.ascii '|'
+		.byte 0				; cursor up
+		.byte 0				; unused
 
-		.ascii "'"
+; row 2
+
+		.byte 0				; tab
+		.ascii 'Q'
+		.ascii 'W'
+		.ascii 'E'
+		.ascii 'R'
+		.ascii 'T'
 		.ascii 'Y'
+		.ascii 'U'
+
+		.ascii 'I'
+		.ascii 'O'
+		.ascii 'P'
+		.ascii '{'
+		.ascii '}'
+		.byte 0xff			; replaced: return
+		.byte 0				; cursor up
+		.byte 0				; unused
+
+; row 3
+
+		.byte 0				; caps lock
+		.ascii 'A'
+		.ascii 'S'
+		.ascii 'D'
+		.ascii 'F'
 		.ascii 'G'
+		.ascii 'H'
+		.ascii 'J'
+
+		.ascii 'K'
+		.ascii 'L'
+		.ascii ':'
+		.ascii '"'
+		.byte 0				; blank
+		.byte 0xff			; delete
+		.byte 0				; cursor right
+		.byte 0				; unused
+
+; row 4
+
+		.byte 0				; blank
+		.ascii 'Z'
+		.ascii 'X'
+		.ascii 'C'
 		.ascii 'V'
 		.ascii 'B'
-		.ascii 'H'
-		.ascii 'U'
-		.ascii '('
-
-; column e
-
-		.ascii ')'
-		.ascii 'I'
-		.ascii 'J'
 		.ascii 'N'
 		.ascii 'M'
-		.ascii 'K'
-		.ascii 'O'
-		.byte 0
 
-; column f
-
-		.byte 0
-		.ascii 'P'
-		.ascii 'L'
 		.ascii '<'
 		.ascii '>'
-		.ascii '{'
-		.byte 0
-		.byte 0
-
-; column g
-
-		.byte 0
-		.byte 0
-		.ascii '}'
 		.ascii '?'
-		.byte 0			; right shift
-		.byte 0
-		.byte 0			; home
-		.byte 0
+		.byte 0				; unwired
+		.ascii ' '
+		.byte 0xff			; backspace
+		.byte 0				; cursor down
+		.byte 0				; unused
 
-; column h
+; row 5 (meta)
 
-		.byte 0xff		; replaced: delete
-		.byte 0xff		; replaced: return
-		.byte 0			; left/right
-		.byte 0			; up/down
-		.byte 0			; f1
-		.byte 0			; f3
-		.byte 0			; f5
-		.byte 0			; f7
+		.byte 0xff			; right shift
+		.byte 0				; right alt
+		.byte 0				; right amiga
+		.byte 0xff			; ctrl
+		.byte 0xff			; left shift
+		.byte 0				; left alt
+		.byte 0				; left amiga
 
-keyhandler:	lda PORTA6522
-		cmpa #0xff
-		beq keyhandlero
+keyinit:	clr keyrawmode
+
+		clr asciilshifton
+		clr asciirshifton
+
+		clr keyreadpointer
+		clr keywritepointer
+
+		; port d handler routine
+		ldx #keyhandler
+		stx handleuartpd
+
+		; set port d up as 9600,8,n,1
+		lda #0b10000011
+		sta LCRPD16C654			; 8n1 and config baud
+		lda #0x30
+		sta LSBDLPD16C654
+		lda #0x00
+		sta MSBDLPD16C654		; 9600
+		lda #0b00000011
+		sta LCRPD16C654			; 8n1 and back to normal
+
+		; enable rx interrupt on port d
+		lda #0x01
+		sta IERPD16C654
+
+		rts
+
+keyhandler:	lda RHRPD16C654
 		ldb keyrawmode
 		tstb
 		beq asciimode
@@ -196,9 +266,9 @@ asciimode:	bita #0x80
 		bra keydownend
 keydown:	ldb #1
 keydownend:	anda #0x7f		; mask out the up/down; its in b
-		cmpa #0o13		; left shift
+		cmpa #0x54		; left shift
 		beq asciilshift
-		cmpa #0o64		; right shift
+		cmpa #0x50		; right shift
 		beq asciirshift
 		tstb			; key direction?
 		bne asciiconvert	; down, so convert it
@@ -210,9 +280,9 @@ asciirshift:	stb asciirshifton
 		rts			; done in the keyboard handler
 
 asciiconvert:	ldx #keybuffer
-		cmpa #0o71		; return
+		cmpa #0x2d		; return
 		beq asciireturn
-		cmpa #0o01		; backspace
+		cmpa #0x4d		; backspace
 		beq asciibacksp
 		tst asciilshifton
 		bne asciishifted

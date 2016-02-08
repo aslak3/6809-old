@@ -68,6 +68,12 @@ vwrite:		pshs y
 		lbsr vseekcommon
 		lbsr vseekwrite
 		tfr u,y			; leau does not set z, so need y
+;		stx DMASRC
+;		ldx #VPORT0
+;		stx DMADST
+;		sty DMALENGTH
+;		lda #0x01
+;		sta DMAFLAGS
 vwritenext:	lda ,x+
 		sta VPORT0
 		leay -1,y
