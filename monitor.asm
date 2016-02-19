@@ -38,89 +38,6 @@
 
 		.org 0xc000
 
-; at the start of rom is the jump table for external (ram) programs to use
-; to call into the rom
-
-		.include 'jumptable.asm'
-
-; START OF GLOBAL READ-ONLY DATA
-
-greetingmsg:	.asciz '\r\n6809 Monitor v0.6 for MAXI09\r\n\r\n'
-promptmsg:	.asciz 'Monitor: > '
-nosuchmsg:	.asciz 'No such command\r\n'
-commfailedmsg:	.asciz 'Command failed, possibly bad syntax\r\n'
-breakatmsg:	.asciz '***Break at '
-badexitmsg:	.asciz 'Internal error; leaving monitor\r\n'
-flashreadymsg:	.asciz '+++'
-resetmsg:	.asciz '\r\n***flash with f or any other key to start\r\n'
-newlinemsg:	.asciz '\r\n'
-
-; commandarray - subroutine address followed by command letter code
-
-commandarray:	.word dumpmemory
-		.ascii 'd'
-		.word writememory
-		.ascii 'w'
-		.word exitmonitor
-		.ascii 'e'
-		.word showregisters
-		.ascii 'r'
-		.word showhelp
-		.ascii 'h'
-		.word showhelp
-		.ascii '?'			; same command different letter
-		.word resetmonitor
-		.ascii 'q'
-		.word showuptime
-		.ascii 'u'
-		.word resetuptime
-		.ascii 'U'
-		.word spistore
-		.ascii '+'
-		.word ideidentify
-		.ascii 'y'
-		.word idereadsector
-		.ascii '<'
-		.word idewritesector
-		.ascii '>'
-		.word readblk
-		.ascii '{'
-		.word fsmount
-		.ascii 'm'
-		.word readinode
-		.ascii 'i'
-		.word readbyinode
-		.ascii 'f'
-		.word listdirbyinode
-		.ascii 'l'
-		.word xmodem
-		.ascii 'x'
-		.word disassemble
-		.ascii 's'
-		.word parsetest
-		.ascii 'z'
-		.word readbyte
-		.ascii 'R'
-		.word readkeyboard
-		.ascii 'k'
-		.word testvramread
-		.ascii 'L'
-		.word testvramwrite
-		.ascii 'S'
-		.word terminit
-		.ascii 'Y'
-		.word tclearscreen
-		.ascii 'V'
-		.word testreg
-		.ascii 'K'
-		.word opl2play
-		.ascii 'O'
-		.word 0x0000
-		.byte NULL
-
-bootbeeps:	.asciz 'abcdefg'
-
-; END OF DATA
 
 ; setup stack to the end of ram so it can go grown backwards
 
@@ -1116,7 +1033,7 @@ flasher:	ldx #flashreadymsg	; tell other end it can send now
 		ldu #ROMSTART		; setup the counter into rom
 inflashblk:	ldx #flashblock		; this is the block in ram we...
 		ldb #64			; are copying into
-inflash:	lbsr iogetchar	; get the byte from the port
+inflash:	lbsr iogetchar		; get the byte from the port
 		sta ,x+			; store it
 		decb			; we store 64bytes
 		bne inflash		; back to the next byte
@@ -1157,6 +1074,90 @@ verflash:	lda ,u+			; get the byte
 ; reset vector
 		
 		jmp [0xfffe]		; jump through the new reset vector
+
+; at this point in rom is the jump table for external (ram) programs to use
+; to call into the rom
+
+		.include 'jumptable.asm'
+
+; START OF GLOBAL READ-ONLY DATA
+
+greetingmsg:	.asciz '\r\n6809 Monitor v0.6 for MAXI09\r\n\r\n'
+promptmsg:	.asciz 'Monitor: > '
+nosuchmsg:	.asciz 'No such command\r\n'
+commfailedmsg:	.asciz 'Command failed, possibly bad syntax\r\n'
+breakatmsg:	.asciz '***Break at '
+badexitmsg:	.asciz 'Internal error; leaving monitor\r\n'
+flashreadymsg:	.asciz '+++'
+resetmsg:	.asciz '\r\n*** 2 flash with f or any other key to start\r\n'
+newlinemsg:	.asciz '\r\n'
+
+; commandarray - subroutine address followed by command letter code
+
+commandarray:	.word dumpmemory
+		.ascii 'd'
+		.word writememory
+		.ascii 'w'
+		.word exitmonitor
+		.ascii 'e'
+		.word showregisters
+		.ascii 'r'
+		.word showhelp
+		.ascii 'h'
+		.word showhelp
+		.ascii '?'			; same command different letter
+		.word resetmonitor
+		.ascii 'q'
+		.word showuptime
+		.ascii 'u'
+		.word resetuptime
+		.ascii 'U'
+		.word spistore
+		.ascii '+'
+		.word ideidentify
+		.ascii 'y'
+		.word idereadsector
+		.ascii '<'
+		.word idewritesector
+		.ascii '>'
+		.word readblk
+		.ascii '{'
+		.word fsmount
+		.ascii 'm'
+		.word readinode
+		.ascii 'i'
+		.word readbyinode
+		.ascii 'f'
+		.word listdirbyinode
+		.ascii 'l'
+		.word xmodem
+		.ascii 'x'
+		.word disassemble
+		.ascii 's'
+		.word parsetest
+		.ascii 'z'
+		.word readbyte
+		.ascii 'R'
+		.word readkeyboard
+		.ascii 'k'
+		.word testvramread
+		.ascii 'L'
+		.word testvramwrite
+		.ascii 'S'
+		.word terminit
+		.ascii 'Y'
+		.word tclearscreen
+		.ascii 'V'
+		.word testreg
+		.ascii 'K'
+		.word opl2play
+		.ascii 'O'
+		.word 0x0000
+		.byte NULL
+
+bootbeeps:	.asciz 'abcdefg'
+
+; END OF DATA
 
 ; include the various subsystem implementations
 
