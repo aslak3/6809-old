@@ -18,15 +18,33 @@ idewaitfordata:	lda IDESTATUS
 		beq idewaitfordata
 		rts
 
-idellread:	ldy #512
-		lbsr idewaitnotbusy
+moo:		.asciz "moo\r\n";
+baa:		.asciz "baa\r\n";
+
+idellread:	lbsr idewaitnotbusy
 		lbsr idewaitfordata
+		tst enabledma
+		beq readnodma
+		ldy #IDEDATA
+		sty DMASRC
+		stx DMADST
+		ldy #512
+		sty DMALENGTH
+		lda #0x02
+		sta DMAFLAGS
+		nop
+		nop
+		leax 512,x
+		rts
+
+readnodma:	ldy #512
 readwordloop:	lda IDEDATA
 		ldb IDEDATA
 		std ,x++
 		leay -2,y
 		bne readwordloop
 		rts
+
 
 idellreadr:	ldy #512
 		lbsr idewaitnotbusy
@@ -50,7 +68,14 @@ writewordloop:	ldd ,x++
 partstartmsg:	.asciz 'Partition starts at: '
 nombrmsg:	.asciz 'No MBR found, assuming single partition\r\n'
 
-idemount:	clr IDELBA0
+idemount:	lda #0x01               ; 8 bit enable
+		sta IDEFEATURES
+
+		lda #0xef		; set features
+		lbsr simpleidecomm
+		lbsr idewaitnotbusy
+
+		clr IDELBA0
 		clr IDELBA1
 		clr IDELBA2
 		clr IDELBA3
