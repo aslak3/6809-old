@@ -87,3 +87,5 @@ tlinestarts:	.rmb 2*25
 trow:		.rmb 1
 tcol:		.rmb 1
 tscrollline:	.rmb 80
+
+enabledma:	.rmb 1
