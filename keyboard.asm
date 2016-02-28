@@ -240,9 +240,9 @@ keyinit:	clr keyrawmode
 		lda #0b10000011
 		sta LCRPD16C654			; 8n1 and config baud
 		lda #0x30
-		sta LSBDLPD16C654
+		sta DLLPD16C654
 		lda #0x00
-		sta MSBDLPD16C654		; 9600
+		sta DLMPD16C654		; 9600
 		lda #0b00000011
 		sta LCRPD16C654			; 8n1 and back to normal
 

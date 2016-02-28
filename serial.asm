@@ -5,9 +5,9 @@
 serialinit:	lda #0b10000011
 		sta LCRPA16C654		; 8n1 and config baud
 		lda #0x30
-		sta LSBDLPA16C654
+		sta DLLPA16C654
 		lda #0x00
-		sta MSBDLPA16C654	; 9600
+		sta DLMPA16C654		; 9600
 		lda #0b00000011
 		sta LCRPA16C654		; 8n1 and back to normal
 
