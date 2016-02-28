@@ -38,10 +38,12 @@
 
 		.org 0xc000
 
-
 ; setup stack to the end of ram so it can go grown backwards
 
-reset:		lds #STACKEND+1
+reset:		lda #0x02		; map all of the eeprom in
+		sta MUDDYSTATE
+
+		lds #STACKEND+1
 
 		lda #0xff		; clear all the interrupt routes
 		sta NMISOURCESR
@@ -54,30 +56,16 @@ reset:		lds #STACKEND+1
 
 		lbsr serialactive
 
-		ldx #resetmsg		; show prompt for flash
+		ldx #consolemsg		; show prompt for console
 		lbsr ioputstr
 
 		lbsr iogetwto		; wait for a key, getting the command
 
 		bne normalstart		; timeout
 
-		cmpa #0x66		; 'f'
-		beq flashing
 		cmpa #0x20		; space
 		beq noscreen
 		bra normalstart
-
-flashing:	ldx #ROMSTART		; setup the rom copy to ram
-		ldy #ROMCOPYSTART	; this is the second half of ram
-romcopy:	lda ,x+			; read in
-		sta ,y+			; and read out
-		cmpx #ROMEND+1		; check to see if we are at the end
-		bne romcopy		; copy more
-
-		ldx #flasher		; get the location of the flasher code
-		leax -ROMSTART,x	; offset it from the start of rom
-		leax ROMCOPYSTART,x	; offset it forward where it now is 
-		jmp ,x			; jump to the new location of flasher
 
 normalstart:	lbsr tactive
 
@@ -1078,18 +1066,17 @@ verflash:	lda ,u+			; get the byte
 ; at this point in rom is the jump table for external (ram) programs to use
 ; to call into the rom
 
-		.include 'jumptable.asm'
 
 ; START OF GLOBAL READ-ONLY DATA
 
-greetingmsg:	.asciz '\r\n6809 Monitor v0.6 for MAXI09\r\n\r\n'
+greetingmsg:	.asciz '\r\n6809 Monitor v0.1bb for MAXI09\r\n\r\n'
 promptmsg:	.asciz 'Monitor: > '
 nosuchmsg:	.asciz 'No such command\r\n'
 commfailedmsg:	.asciz 'Command failed, possibly bad syntax\r\n'
 breakatmsg:	.asciz '***Break at '
 badexitmsg:	.asciz 'Internal error; leaving monitor\r\n'
 flashreadymsg:	.asciz '+++'
-resetmsg:	.asciz '\r\n*** 2 flash with f or any other key to start\r\n'
+consolemsg:	.asciz '\r\nPress SPACE to activate console\r\n'
 newlinemsg:	.asciz '\r\n'
 
 ; commandarray - subroutine address followed by command letter code
@@ -1175,3 +1162,9 @@ bootbeeps:	.asciz 'abcdefg'
 		.include 'terminal.asm'
 ;		.include 'buzzer.asm'
 		.include 'uart.asm'
+
+; jump table towards the end. enough for several hundred entries.
+
+		.org 0xfe00
+
+		.include 'jumptable.asm'
