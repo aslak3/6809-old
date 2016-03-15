@@ -4,8 +4,6 @@
 
 		.org 0
 
-		lds #USERSTACKEND
-
 		ldx #0x4000
 again:		lda ,x+
 		cmpa #0

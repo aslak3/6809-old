@@ -12,7 +12,7 @@ jspistop::		jmp spistop
 jspiwrite::		jmp spiwrite
 jspiread::		jmp spiread
 jspiwriteblock::	jmp spiwriteblock
-jspireadblock::		jmp spireadblock
+jspireadblock::	jmp spireadblock
 
 jaschextobyte::		jmp aschextobyte
 jaschextoword::		jmp aschextoword

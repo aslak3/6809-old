@@ -3,8 +3,6 @@
 
 ; set the time time
 
-		lds #USERSTACKEND
-
 		lda #0x11
 		leax spibuffer,pcr
 clear:		clr ,x+
@@ -53,7 +51,7 @@ clear:		clr ,x+
 		jsr jiogetbyte
 		sta 4,y
 
-		lda #0xfe
+		lda #0b01001111		; assert chip select on 1305
 		jsr jspistart		; mark with start
 
 		leax spibuffer,pcr

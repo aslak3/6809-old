@@ -7,6 +7,7 @@
 ; interrupt handler routines
 
 handleuart:	.rmb 2
+handle6522:	.rmb 2
 
 ; uart port handlers
 

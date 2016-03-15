@@ -50,9 +50,11 @@ reset:		lda #0x02		; map all of the eeprom in
 		sta IRQSOURCESR
 		sta FIRQSOURCESR
 
+		lbsr timerinit		; init the timer
 		lbsr uartinit		; uart interrupt routing
 		lbsr serialinit		; setup the console serial port
 		lbsr terminit		; the terminal (video and keyboard)
+		clr enabledma		; no dma by default
 
 		lbsr serialactive
 
@@ -110,7 +112,10 @@ irqinterrupt:	lda ACTIVEIRQ
 allinterrupts:	bita #INTUART
 		beq doneuart
 		jsr [handleuart]
-doneuart:	rts
+doneuart:	bita #INT6522
+		beq done6522
+		jsr [handle6522]
+done6522:	rts
 
 ; monitor entry point
 
@@ -374,13 +379,13 @@ helpmsg:	.ascii 'Commands:\r\n'
 		.ascii '  d AAAA LLLL : dump from AAAA count LLLL bytes in hex\r\n'
 		.ascii '  e EEEE : exit to user code at EEEE\r\n'
 		.ascii '  q : reset the monitor\r\n'
-		.ascii '  + SSSS WWWW RRRR : from address SSSS write WWWW spi bytes then read\r\n'
-		.ascii '    RRRR bytes\r\n'
+		.ascii '  + SS MMMM WWWW RRRR : with device SS selected, from address\r\n'
+		.ascii '    MMMM\r\n write WWWW spi bytes then read RRRR bytes\r\n'
 		.ascii '  u : show uptime\r\n'
 		.ascii '  U : clear uptime counter\r\n'
 		.ascii '  m : set 8bit ide and read mbr\r\n'
 		.ascii '  y : send ide identify command and show basic info\r\n'
-		.ascii '  { MMMM NNNN : read 1k disk block NNNN into MMMM\r\n'
+		.ascii '  { MMMM NNNN : read 1k fs disk block NNNN into MMMM\r\n'
 		.ascii '  < L0 L1 NN MMMM : read NN sectors from L0 L1 into MMMM\r\n'
 		.ascii '  > L0 L1 NN MMMM : write NN sectors from L0 L1 from MMMM\r\n'
 		.ascii '  l IIII : list directory at inode IIII\r\n'
@@ -388,6 +393,8 @@ helpmsg:	.ascii 'Commands:\r\n'
 		.ascii '  f MMMM IIII : read file(etc) at inode IIII into MMMM\r\n'
 		.ascii '  x MMMM : receive file over XMODEM starting at MMMM\r\n'
 		.ascii '  k : test keyboard\r\n'
+		.ascii '  j BB : send BB command to keyboard controller\r\n'
+		.ascii '  O MMMM : play the OPL2 stream at MMMM\r\n'
 		.ascii '  h or ? : this help\r\n'
 		.asciz '\r\n'
 
@@ -425,9 +432,19 @@ resetuptime:	clra			; reset uptime
 		clra
 		rts
 
-; spi store - "+ FFFF WWW RRR..." - writes and reads to the spi bus
+; spi store - "+ SS MMMM WWWW RRRR ..." - writes and reads to the spi bus
 
 spistore:	lbsr parseinput		; parse hexes, filling out inputbuffer
+
+		lda ,y+			; get the type
+		cmpa #1			; byte?
+		lbne generalerror	; validation error
+		ldb ,y+			; get the SPI selects
+
+		lda ,y+			; get the type
+		cmpa #1			; byte?
+		lbne generalerror	; validation error
+		ldu ,y++		; get the start of mpu memory
 
 		lda ,y+			; get the type
 		cmpa #2			; word?
@@ -443,6 +460,8 @@ spistore:	lbsr parseinput		; parse hexes, filling out inputbuffer
 		cmpa #2			; word?
 		lbne generalerror	; validation error
 		ldy ,y			; get the count of bytes to read
+
+		tfr b,a			; restore the slave selects
 
 		lbsr spistart		; mark with start
 
@@ -890,6 +909,20 @@ readkeyboard:	lda LSRPD16C654		; get status
 readkeyboardo:	clra
 		rts
 
+sendkeyboard:	lbsr parseinput		; parse hexes, filling out inputbuffer
+		lda ,y+			; get the type
+		cmpa #1			; is it a byte
+		lbne generalerror	; validation error
+		lda ,y+			; start address
+
+sendkeyboardl:	ldb LSRPD16C654		; get status
+		andb #0b00100000	; transmit empty
+		beq sendkeyboardl	; wait for port to be idle
+		sta THRPD16C654		; output the char
+
+		clra
+		rts
+
 testvramread:	lbsr parseinput		; parse hexes, filling out inputbuffer
 		lda ,y+			; get the type
 		cmpa #2			; is it a word?
@@ -959,44 +992,54 @@ opl2play0:	cmpa #0
 		bne opl2play1
 		ldb ,y+
 		beq opl2playout
+		incb
 		clra
+		adca #0
 		lsra
 		rorb
 		lsra
 		rorb
 		tfr d,x
-		leax 1,x
-;		lbsr timerwait
+		lbsr timerwait
 		bra opl2playloop
 
 opl2play1:	cmpa #1
 		bne opl2play2
 		ldd ,y++
 		exg a,b
+		incb
+		adca #0
 		lsra
 		rorb
 		lsra
 		rorb
 		tfr d,x
-;		lbsr timerwait
+		lbsr timerwait
 		bra opl2playloop
 
 opl2play2:	cmpa #2
 		bne opl2playother
-		lda ,x+
+		lda ,y+
 
 opl2play3:	cmpa #3
 		bne opl2playother
-		lda ,x+
+		lda ,y+
 
 opl2play4:	cmpa #4
 		bne opl2playother
-		lda ,x+
+		lda ,y+
 
-opl2playother:	sta 0x9000
+opl2playother:	sta OPLADDRESS
+		nop
+		nop
+		nop
 		nop
 		lda ,y+
-		sta 0x9001
+		sta OPLDATA
+		nop
+		nop
+		nop
+		nop
 		nop
 		nop
 		nop
@@ -1127,6 +1170,8 @@ commandarray:	.word dumpmemory
 		.ascii 'R'
 		.word readkeyboard
 		.ascii 'k'
+		.word sendkeyboard
+		.ascii 'j'
 		.word testvramread
 		.ascii 'L'
 		.word testvramwrite
@@ -1157,10 +1202,9 @@ bootbeeps:	.asciz 'abcdefg'
 		.include 'font.asm'
 		.include 'v99.asm'
 		.include 'keyboard.asm'
-;		.include 'timer.asm'
+		.include 'timer.asm'
 		.include 'io.asm'
 		.include 'terminal.asm'
-;		.include 'buzzer.asm'
 		.include 'uart.asm'
 
 ; jump table towards the end. enough for several hundred entries.

@@ -2,9 +2,7 @@
 
 ; time
 
-showtime:	lds #USERSTACKEND
-
-		lda #0xfe
+showtime:	lda #0b01001111		; assert chip select on 1305
 		jsr jspistart		; mark with start
 
 		clrb

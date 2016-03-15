@@ -4,8 +4,6 @@
 
 		.org 0
 
-		lds #USERSTACKEND
-
 		lda #10
 		leax message,pcr
 again:		pshs a,x

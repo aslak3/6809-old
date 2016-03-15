@@ -1,67 +1,244 @@
-;;; SPI
-
-spiinit:	lda #0x01		; CPOL=0 and CPHA=1, which is
-;		sta SPICONTROL		; needed by the DS1305
-		lda #0x02		; div=2, which is E by 4
-;		sta SPIDIV
-		lda #0xff		; "disable" the SS outputs
-;		sta SPISS
-		rts
-
 ;;; SPI low level routines
 
-spistart:;	sta SPISS
-		nop
+spistart:	clrb			; clear clock and MOSI
+		stb SPIOUT
+		lda #0b01001111		; assert chip select on 1305
+		sta SPISELECTS
+		nop			; pause
+
 		rts
 
-spistop:	lda #0xff		; deassert chip select
-;		sta SPISS
-		nop
+spistop:	lda #0b00001011		; Disable all SPI selects
+		sta SPISELECTS
+		clrb
+		stb SPIOUT		; clear clock and MOSI
+		nop			; pause
+
 		rts
 
 ; spiwrite - send the byte in b
 
-spiwrite:	;stb SPIDATAOUT
-		
-writeloop:	;tst SPISTATUS
-		bpl writeloop
+spiwrite:
+
+; bit 7
+
+		clra			; start from nothing
+		lslb			; move the bit to send into carry
+		adca #0			; add carry so low bit is set for out
+		sta SPIOUT		; output
+		ora #SCLK		; assert the clock by oring it in
+		sta SPIOUT		; output
+		nop			; wait a bit
+		eora #SCLK		; clear the clock
+		sta SPIOUT
+		nop			; output and wait
+
+; bit 6
+
+		clra
+		lslb
+		adca #0
+		sta SPIOUT
+		ora #SCLK
+		sta SPIOUT
+		nop
+		eora #SCLK
+		sta SPIOUT
+		nop
+
+; bit 5
+
+		clra
+		lslb
+		adca #0
+		sta SPIOUT
+		ora #SCLK
+		sta SPIOUT
+		nop
+		eora #SCLK
+		sta SPIOUT
+		nop
+
+; bit 4
+
+		clra
+		lslb
+		adca #0
+		sta SPIOUT
+		ora #SCLK
+		sta SPIOUT
+		nop
+		eora #SCLK
+		sta SPIOUT
+		nop
+
+; bit 3
+
+		clra
+		lslb
+		adca #0
+		sta SPIOUT
+		ora #SCLK
+		sta SPIOUT
+		nop
+		eora #SCLK
+		sta SPIOUT
+		nop
+
+; bit 2
+
+		clra
+		lslb
+		adca #0
+		sta SPIOUT
+		ora #SCLK
+		sta SPIOUT
+		nop
+		eora #SCLK
+		sta SPIOUT
+		nop
+
+; bit 1
+
+		clra
+		lslb
+		adca #0
+		sta SPIOUT
+		ora #SCLK
+		sta SPIOUT
+		nop
+		eora #SCLK
+		sta SPIOUT
+		nop
+
+; bit 0
+
+		clra
+		lslb
+		adca #0
+		sta SPIOUT
+		ora #SCLK
+		sta SPIOUT
+		nop
+		eora #SCLK
+		sta SPIOUT
+		nop
+
+		rts
+
+spiread:	clrb
+
+; bit 7
+
+		lda #SCLK
+		sta SPIOUT
+		nop
+		lda SPIIN
+		rora
+		rolb
+		clra
+		sta SPIOUT
+		nop
+
+; bit 6
+
+		lda #SCLK
+		sta SPIOUT
+		nop
+		lda SPIIN
+		rora
+		rolb
+		clra
+		sta SPIOUT
+		nop
+
+; bit 5
+
+		lda #SCLK
+		sta SPIOUT
+		nop
+		lda SPIIN
+		rora
+		rolb
+		clra
+		sta SPIOUT
+		nop
+
+; bit 4
+
+		lda #SCLK
+		sta SPIOUT
+		nop
+		lda SPIIN
+		rora
+		rolb
+		clra
+		sta SPIOUT
+		nop
+
+; bit 3
+
+		lda #SCLK
+		sta SPIOUT
+		nop
+		lda SPIIN
+		rora
+		rolb
+		clra
+		sta SPIOUT
+		nop
+
+; bit 2
+
+		lda #SCLK
+		sta SPIOUT
+		nop
+		lda SPIIN
+		rora
+		rolb
+		clra
+		sta SPIOUT
+		nop
+
+; bit 1
+
+		lda #SCLK
+		sta SPIOUT
+		nop
+		lda SPIIN
+		rora
+		rolb
+		clra
+		sta SPIOUT
+		nop
+
+; bit 0
+
+		lda #SCLK
+		sta SPIOUT
+		nop
+		lda SPIIN
+		rora
+		rolb
+		clra
+		sta SPIOUT
+		nop
 
 		rts
 
 ; spiwriteblock - sends y bytes from x
 
 spiwriteblock:	ldb ,x+
-		;stb SPIDATAOUT
-
-writeblockloop:	;tst SPISTATUS
-		bpl writeblockloop
-
+		lbsr spiwrite
 		leay -1,y
 		bne spiwriteblock
 
 		rts
 
-; spiread - read the next spi byte into b
-
-spiread:	;clr SPIDATAOUT
-
-readloop:	;tst SPISTATUS
-		bpl readloop
-
-		;ldb SPIDATAIN
-
-		rts
-
 ; spireadblock - read y bytes into the buffer starting at x
 
-spireadblock:	;clr SPIDATAOUT
-
-readblockloop:	;tst SPISTATUS
-		bpl readblockloop
-
-		;ldb SPIDATAIN
+spireadblock:	lbsr spiread
 		stb ,x+
-
 		leay -1,y
 		bne spireadblock
 
